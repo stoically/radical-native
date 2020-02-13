@@ -1,0 +1,16 @@
+{
+  "description": "Pushing Riot Web beyond the limits of the web platform",
+  "manifest_version": 2,
+  "name": "Riot Booster Pack",
+  "version": "0.1beta2",
+  "applications": {
+    "gecko": {
+      "id": "@riot-booster-pack",
+      "strict_min_version": "68.0"
+    }
+  },
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "permissions": ["management", "nativeMessaging"]
+}
