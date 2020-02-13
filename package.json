@@ -1,0 +1,70 @@
+{
+  "name": "riot-web-booster-pack",
+  "private": true,
+  "scripts": {
+    "clean": "rimraf build target",
+    "build": "run-p build:*",
+    "build:firefox": "mkdir -p build/firefox && run-p build:firefox:*",
+    "build:firefox:parcel": "parcel build src/background.ts -d build/firefox --no-source-maps --no-minify",
+    "build:firefox:static": "cp src/manifest.firefox.json build/firefox/manifest.json && cp LICENSE build/firefox",
+    "build:native": "cargo build --release",
+    "dev": "run-p dev:*",
+    "dev:firefox": "mkdir -p build/firefox && run-p dev:firefox:*",
+    "dev:firefox:parcel": "parcel watch src/background.ts -d build/firefox  --no-hmr",
+    "dev:firefox:static": "nodemon -w src --ext '*' --exec 'cp src/manifest.firefox.json build/firefox/manifest.json'",
+    "dev:chrome": "mkdir -p build/chrome && run-p dev:chrome:*",
+    "dev:chrome:parcel": "parcel watch src/background.ts -d build/chrome --no-hmr",
+    "dev:chrome:polyfill": "cp node_modules/webextension-polyfill/dist/browser-polyfill.min.js build/chrome",
+    "dev:chrome:static": "nodemon -w src --ext '*' --exec 'cp src/manifest.chrome.json build/chrome/manifest.json'",
+    "dev:install-native": "./native/scripts/install.sh -l",
+    "dev:native": "cargo watch -x build",
+    "lint": "run-p lint:*",
+    "lint:eslint": "eslint '{src,test}/**/*.ts'",
+    "lint:tsc": "tsc",
+    "test": "ts-mocha --paths",
+    "test:watch": "npm run test -- --watch",
+    "test:coverage": "nyc npm run test"
+  },
+  "devDependencies": {
+    "@types/firefox-webext-browser": "^70.0.1",
+    "@types/mocha": "^7.0.1",
+    "@types/node": "^13.7.0",
+    "@typescript-eslint/eslint-plugin": "^2.19.0",
+    "@typescript-eslint/parser": "^2.19.0",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.0",
+    "eslint-plugin-prettier": "^3.1.2",
+    "mocha": "^7.0.1",
+    "nodemon": "^2.0.2",
+    "npm-run-all": "^4.1.5",
+    "nyc": "^15.0.0",
+    "parcel": "^1.12.4",
+    "prettier": "^1.19.1",
+    "rimraf": "^3.0.2",
+    "ts-mocha": "^6.0.0",
+    "tsconfig-paths": "^3.9.0",
+    "typescript": "^3.7.5",
+    "webextension-polyfill": "^0.6.0"
+  },
+  "browserslist": [
+    "Firefox >= 67",
+    "last 2 Chrome versions"
+  ],
+  "prettier": {
+    "trailingComma": "es5"
+  },
+  "mocha": {
+    "bail": true,
+    "reporter": "progress",
+    "extension": "ts",
+    "project": "tsconfig.json"
+  },
+  "nyc": {
+    "reporter": [
+      "html",
+      "text",
+      "lcov"
+    ]
+  },
+  "license": "Apache-2.0"
+}

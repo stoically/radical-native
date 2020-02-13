@@ -1,0 +1,68 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  createrelease:
+    name: create release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: true
+          prerelease: true
+      - run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+      - uses: actions/upload-artifact@v1
+        with:
+          name: release_url
+          path: release_url.txt
+
+  build_and_upload:
+    needs: [createrelease]
+    name: build and upload
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      matrix:
+        config:
+          - { os: ubuntu-latest, release_uname: "linux-x86_64" }
+          - { os: macOS-latest, release_uname: "mac" }
+    steps:
+      - name: libsqlcipher
+        if: matrix.config.os == 'ubuntu-latest'
+        run: sudo apt-get install libsqlcipher0 libsqlcipher-dev
+      - name: libsqlcipher
+        if: matrix.config.os == 'macOS-latest'
+        run: brew install sqlcipher
+      - uses: actions/checkout@v2
+      - name: build
+        run: |
+          npm install
+          npm run lint
+          npm run test:coverage
+          npm run build
+      - uses: actions/download-artifact@v1
+        with:
+          name: release_url
+      - name: get_release_info
+        id: get_release_info
+        run: |
+          value=`cat release_url/release_url.txt`
+          echo ::set-output name=upload_url::$value
+      - id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+          asset_path: ./target/release/riot-web-booster-pack
+          asset_name: riot-web-booster-pack_${{ matrix.config.release_uname }}
+          asset_content_type: application/octet-stream
