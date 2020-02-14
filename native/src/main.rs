@@ -23,8 +23,12 @@ use error::Error;
 use indexer::Indexer;
 use native_messaging::{stdin, stdout_error, stdout_reply};
 
+pub(crate) struct BoosterPack {
+    indexer: Option<Indexer>,
+}
+
 fn main() {
-    let mut indexer = Indexer::new();
+    let mut pack = BoosterPack { indexer: None };
     loop {
         let (rpc_id, message_in) = match stdin() {
             Ok(stdin) => stdin,
@@ -34,7 +38,8 @@ fn main() {
             }
         };
 
-        let reply = indexer.handle_message(message_in);
+        let reply = indexer::handle_message(&mut pack, message_in);
+
         match reply {
             Ok(reply) => stdout_reply(rpc_id, reply),
             Err(error) => stdout_error(rpc_id, error),

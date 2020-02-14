@@ -6,13 +6,13 @@ use crate::Error;
 
 pub(crate) fn stdin() -> Result<(i64, Value), Error> {
     let mut buffer = [0; 4];
-    io::stdin().read_exact(&mut buffer).unwrap();
+    io::stdin().read_exact(&mut buffer)?;
     let mut buf = Cursor::new(&buffer);
-    let size = buf.read_u32::<NativeEndian>().unwrap();
+    let size = buf.read_u32::<NativeEndian>()?;
 
     let mut data_buffer = vec![0u8; size as usize];
-    io::stdin().read_exact(&mut data_buffer).unwrap();
-    let message: Value = serde_json::from_slice(&data_buffer).unwrap();
+    io::stdin().read_exact(&mut data_buffer)?;
+    let message: Value = serde_json::from_slice(&data_buffer)?;
     let rpc_id = as_i64!(message, "rpc_id");
 
     Ok((rpc_id, message))

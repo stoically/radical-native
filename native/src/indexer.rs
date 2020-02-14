@@ -1,10 +1,12 @@
+use std::path::{Path, PathBuf};
+
 use serde_json::{json, Value};
 use seshat::{
-    CheckpointDirection, Connection, CrawlerCheckpoint, Database, Event, EventType, LoadConfig,
-    LoadDirection, Profile, SearchConfig, SearchResult,
+    CheckpointDirection, Config, Connection, CrawlerCheckpoint, Database, Event, EventType,
+    Language, LoadConfig, LoadDirection, Profile, SearchConfig, SearchResult,
 };
-use tempfile::tempdir;
 
+use crate::BoosterPack;
 use crate::Error;
 
 enum MessageMethod {
@@ -24,22 +26,100 @@ enum MessageMethod {
     Unknown,
 }
 
+pub(crate) fn handle_message(pack: &mut BoosterPack, message: Value) -> Result<Value, Error> {
+    let method_str = as_str!(message, "method");
+    let method = method_to_enum(&method_str);
+
+    let res = match pack.indexer {
+        Some(ref mut indexer) => match method {
+            MessageMethod::LoadCheckpoints => indexer.load_checkpoints()?,
+            MessageMethod::IsEventIndexEmpty => indexer.is_event_index_empty()?,
+            MessageMethod::CommitLiveEvents => indexer.commit_live_events()?,
+            MessageMethod::AddEventToIndex => indexer.add_event_to_index(message)?,
+            MessageMethod::AddCrawlerCheckpoint => indexer.add_crawler_checkpoint(message)?,
+            MessageMethod::AddHistoricEvents => indexer.add_history_events(message)?,
+            MessageMethod::RemoveCrawlerCheckpoint => indexer.remove_crawler_checkpoint(message)?,
+            MessageMethod::SearchEventIndex => indexer.search_event_index(message)?,
+            MessageMethod::LoadFileEvents => indexer.load_file_events(message)?,
+            MessageMethod::GetStats => indexer.get_stats()?,
+            MessageMethod::CloseEventIndex => {
+                pack.indexer = None;
+                json!(null)
+            }
+            MessageMethod::DeleteEventIndex => return Err(Error::CloseIndexBeforeDelete),
+            MessageMethod::InitEventIndex => {
+                // re-initialize
+                pack.indexer = None;
+                init_event_index(pack, message)?
+            }
+            MessageMethod::Unknown => {
+                return Err(Error::UnknownMethod {
+                    error: format!("Unknown method: {}", method_str),
+                })
+            }
+        },
+        None => match method {
+            MessageMethod::InitEventIndex => init_event_index(pack, message)?,
+            MessageMethod::DeleteEventIndex => delete_event_index()?,
+            _ => return Err(Error::IndexerNotInitialized),
+        },
+    };
+
+    Ok(res)
+}
+
+fn event_store_path() -> Result<PathBuf, Error> {
+    let mut path = match dirs::data_dir() {
+        Some(path) => path,
+        None => return Err(Error::UserDataDirNotFound),
+    };
+    path.push("riot-web-booster-pack");
+    path.push("EventStore");
+    path.push("default");
+    Ok(path)
+}
+
+fn init_event_index(pack: &mut BoosterPack, message: Value) -> Result<Value, Error> {
+    let path = event_store_path()?;
+
+    let mut config = Config::new();
+    config = config.set_passphrase(
+        message["passphrase"]
+            .as_str()
+            .unwrap_or("DEFAULT_PASSPHRASE"),
+    );
+
+    if let Some(language) = message["language"].as_str() {
+        let language = Language::from(language);
+        config = config.set_language(&language);
+    }
+
+    pack.indexer = Some(Indexer::new(path, &config)?);
+    Ok(json!(null))
+}
+
+fn delete_event_index() -> Result<Value, Error> {
+    let path = event_store_path()?;
+    std::fs::remove_dir_all(path)?;
+
+    Ok(json!(null))
+}
+
 pub(crate) struct Indexer {
     database: Database,
     connection: Connection,
-    tmpdir: tempfile::TempDir,
 }
 
 impl Indexer {
-    pub fn new() -> Self {
-        let tmpdir = tempdir().unwrap();
-        let database = Database::new(tmpdir.path()).unwrap();
-        let connection = database.get_connection().unwrap();
-        Indexer {
+    pub fn new<P: AsRef<Path>>(path: P, config: &Config) -> Result<Indexer, Error> {
+        let path = path.as_ref();
+        std::fs::create_dir_all(path)?;
+        let database = Database::new_with_config(path, &config)?;
+        let connection = database.get_connection()?;
+        Ok(Indexer {
             database,
             connection,
-            tmpdir,
-        }
+        })
     }
 
     fn load_checkpoints(&mut self) -> Result<Value, Error> {
@@ -175,12 +255,6 @@ impl Indexer {
         Ok(json!(results))
     }
 
-    fn close_event_index(&mut self) -> Result<Value, Error> {
-        // drop(connection);
-        // drop(database);
-        Ok(json!(null))
-    }
-
     fn get_stats(&mut self) -> Result<Value, Error> {
         let ret = self.connection.get_stats()?;
         Ok(json!({
@@ -188,35 +262,6 @@ impl Indexer {
             "roomCount": ret.room_count,
             "size": ret.size
         }))
-    }
-
-    pub fn handle_message(&mut self, message: Value) -> Result<Value, Error> {
-        let method = as_str!(message, "method");
-
-        let value = match method_to_enum(&method) {
-            MessageMethod::InitEventIndex => json!(null),
-            MessageMethod::LoadCheckpoints => self.load_checkpoints()?,
-            MessageMethod::IsEventIndexEmpty => self.is_event_index_empty()?,
-            MessageMethod::CommitLiveEvents => self.commit_live_events()?,
-            MessageMethod::AddEventToIndex => self.add_event_to_index(message)?,
-            MessageMethod::AddCrawlerCheckpoint => self.add_crawler_checkpoint(message)?,
-            MessageMethod::AddHistoricEvents => self.add_history_events(message)?,
-            MessageMethod::RemoveCrawlerCheckpoint => self.remove_crawler_checkpoint(message)?,
-            MessageMethod::SearchEventIndex => self.search_event_index(message)?,
-            MessageMethod::LoadFileEvents => self.load_file_events(message)?,
-            MessageMethod::CloseEventIndex => self.close_event_index()?,
-            MessageMethod::GetStats => self.get_stats()?,
-            MessageMethod::DeleteEventIndex => {
-                // delete folders
-                std::process::exit(0);
-            }
-            MessageMethod::Unknown => {
-                return Err(Error::UnknownMethod {
-                    error: format!("Unknown method: {}", method),
-                })
-            }
-        };
-        Ok(value)
     }
 }
 
@@ -392,4 +437,92 @@ fn method_to_enum(method: &String) -> MessageMethod {
     }
 
     return MessageMethod::Unknown;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn event_room_message_text() -> Value {
+        json!({
+            "type": "m.room.message",
+            "room_id": "!FDVbSkWZSIcwvBFMdt:localhost",
+            "sender": "@example2:localhost",
+            "content": {
+                "body": "Test message",
+                "msgtype": "m.text"
+            },
+            "origin_server_ts": 1580728702628 as usize,
+            "unsigned": {
+                "age": 949499816 as usize
+            },
+            "event_id": "$lp49H7iDTNWQxD-fiZ6sDE6vT70DlYdKdoujEB5QtLM",
+            "user_id": "@example2:localhost",
+            "age": 949499816 as usize
+        })
+    }
+
+    #[test]
+    fn json_message_add_event_to_index() {
+        use tempfile::tempdir;
+
+        let tmpdir = tempdir().unwrap();
+        std::env::set_var("HOME", tmpdir.path());
+
+        let mut pack = BoosterPack { indexer: None };
+        handle_message(
+            &mut pack,
+            json!({
+                "method": "initEventIndex"
+            }),
+        )
+        .unwrap();
+
+        let profile = Profile::new("Alice", "");
+        handle_message(
+            &mut pack,
+            json!({
+                "method": "addEventToIndex",
+                "content": {
+                    "ev": event_room_message_text(),
+                    "profile": profile
+                }
+            }),
+        )
+        .unwrap();
+
+        handle_message(
+            &mut pack,
+            json!({
+                "method": "commitLiveEvents"
+            }),
+        )
+        .unwrap();
+
+        let reply = handle_message(
+            &mut pack,
+            json!({
+                "method": "getStats"
+            }),
+        )
+        .unwrap();
+
+        handle_message(
+            &mut pack,
+            json!({
+                "method": "closeEventIndex"
+            }),
+        )
+        .unwrap();
+
+        handle_message(
+            &mut pack,
+            json!({
+                "method": "deleteEventIndex"
+            }),
+        )
+        .unwrap();
+
+        assert_eq!(reply["eventCount"].as_i64().unwrap(), 1);
+    }
 }
