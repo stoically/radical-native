@@ -60,7 +60,7 @@ pub(crate) fn handle_message(pack: &mut BoosterPack, message: Value) -> Result<V
         },
         None => match method {
             MessageMethod::InitEventIndex => init_event_index(pack, message)?,
-            MessageMethod::DeleteEventIndex => delete_event_index()?,
+            MessageMethod::DeleteEventIndex => delete_event_index(message)?,
             _ => return Err(Error::IndexerNotInitialized),
         },
     };
@@ -68,20 +68,20 @@ pub(crate) fn handle_message(pack: &mut BoosterPack, message: Value) -> Result<V
     Ok(res)
 }
 
-fn event_store_path() -> Result<PathBuf, Error> {
+fn event_store_path(message: &Value) -> Result<PathBuf, Error> {
+    let event_store = message["eventStore"].as_str().unwrap_or("default");
     let mut path = match dirs::data_dir() {
         Some(path) => path,
         None => return Err(Error::UserDataDirNotFound),
     };
     path.push("riot-web-booster-pack");
     path.push("EventStore");
-    path.push("default");
+    path.push(event_store);
     Ok(path)
 }
 
 fn init_event_index(pack: &mut BoosterPack, message: Value) -> Result<Value, Error> {
-    let path = event_store_path()?;
-
+    let path = event_store_path(&message)?;
     let mut config = Config::new();
     config = config.set_passphrase(
         message["passphrase"]
@@ -98,8 +98,8 @@ fn init_event_index(pack: &mut BoosterPack, message: Value) -> Result<Value, Err
     Ok(json!(null))
 }
 
-fn delete_event_index() -> Result<Value, Error> {
-    let path = event_store_path()?;
+fn delete_event_index(message: Value) -> Result<Value, Error> {
+    let path = event_store_path(&message)?;
     std::fs::remove_dir_all(path)?;
 
     Ok(json!(null))

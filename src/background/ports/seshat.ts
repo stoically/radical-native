@@ -18,17 +18,16 @@ export class SeshatPort {
   private port?: browser.runtime.Port;
   private rpcId = 0;
   private rpcPromises: Map<number, any> = new Map();
+  private ready = false;
+
+  constructor() {
+    this.init();
+  }
 
   async handleExternalMessage(message: any): Promise<any> {
     switch (message.method) {
-      case "initEventIndex":
-        this.init();
-        return this.postMessage(message);
-
-      case "deleteEventIndex":
-        // TODO: properly this.postMessage
-        this.port?.postMessage(message);
-        return;
+      case "supportsEventIndexing":
+        return this.ready;
 
       default:
         return this.postMessage(message);
@@ -42,6 +41,7 @@ export class SeshatPort {
   }
 
   private close(): void {
+    this.ready = false;
     this.port?.onDisconnect.removeListener(this.handleDisconnect.bind(this));
     this.port?.onMessage.removeListener(this.handleMessage.bind(this));
     delete this.port;
@@ -62,6 +62,12 @@ export class SeshatPort {
   }
 
   private handleMessage(message: any): void {
+    if (message.ready) {
+      debug("port ready");
+      this.ready = true;
+      return;
+    }
+
     const rpcPromise = this.rpcPromises.get(message.rpc_id);
     if (!rpcPromise) {
       debug("port message received without matching rpcPromise", message);

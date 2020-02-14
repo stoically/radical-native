@@ -21,7 +21,7 @@ mod native_messaging;
 
 use error::Error;
 use indexer::Indexer;
-use native_messaging::{stdin, stdout_error, stdout_reply};
+use native_messaging::{stdin, stdout_error, stdout_ready, stdout_reply};
 
 pub(crate) struct BoosterPack {
     indexer: Option<Indexer>,
@@ -29,11 +29,12 @@ pub(crate) struct BoosterPack {
 
 fn main() {
     let mut pack = BoosterPack { indexer: None };
+    stdout_ready();
     loop {
         let (rpc_id, message_in) = match stdin() {
             Ok(stdin) => stdin,
             Err(error) => {
-                stdout_error(-1, error).unwrap_or_else(|error| eprintln!("{:?}", error));
+                stdout_error(-1, error);
                 continue;
             }
         };
@@ -43,7 +44,6 @@ fn main() {
         match reply {
             Ok(reply) => stdout_reply(rpc_id, reply),
             Err(error) => stdout_error(rpc_id, error),
-        }
-        .unwrap_or_else(|error| eprintln!("{:?}", error));
+        };
     }
 }

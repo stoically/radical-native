@@ -12,14 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { SeshatPort } from "./ports/seshat";
 import { debug } from "./debug";
+import { Management } from "./management";
+import { SeshatPort } from "./ports/seshat";
 
 export class Background {
-  private seshatPort: SeshatPort;
-  constructor() {
-    this.seshatPort = new SeshatPort();
+  public manifest = browser.runtime.getManifest();
+  public version = this.manifest.version;
+  public browserType = this.manifest.applications?.gecko ? "firefox" : "chrome";
+  public management = new Management();
+  public seshat = new SeshatPort();
 
+  constructor() {
     browser.runtime.onMessageExternal.addListener(
       this.handleExternalMessage.bind(this)
     );
@@ -44,7 +48,7 @@ export class Background {
 
     switch (message.type) {
       case "seshat":
-        return this.seshatPort.handleExternalMessage(message);
+        return this.seshat.handleExternalMessage(message);
     }
   }
 }

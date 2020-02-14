@@ -18,18 +18,27 @@ pub(crate) fn stdin() -> Result<(i64, Value), Error> {
     Ok((rpc_id, message))
 }
 
-pub(crate) fn stdout_reply(rpc_id: i64, reply: Value) -> Result<(), Error> {
+pub(crate) fn stdout_ready() {
+    stdout(json!({
+        "ready": true
+    }))
+    .unwrap_or_else(|error| eprintln!("{:?}", error));
+}
+
+pub(crate) fn stdout_reply(rpc_id: i64, reply: Value) {
     stdout(json!({
         "rpc_id": rpc_id,
         "reply": reply,
     }))
+    .unwrap_or_else(|error| eprintln!("{:?}", error));
 }
 
-pub(crate) fn stdout_error(rpc_id: i64, error: Error) -> Result<(), Error> {
+pub(crate) fn stdout_error(rpc_id: i64, error: Error) {
     stdout(json!({
         "rpc_id": rpc_id,
         "error": format!("{:?}", error),
     }))
+    .unwrap_or_else(|error| eprintln!("{:?}", error));
 }
 
 fn stdout(message: Value) -> Result<(), Error> {
