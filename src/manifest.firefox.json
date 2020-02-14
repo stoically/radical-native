@@ -12,5 +12,5 @@
   "background": {
     "scripts": ["background.js"]
   },
-  "permissions": ["management", "nativeMessaging"]
+  "permissions": ["contextualIdentities", "management", "nativeMessaging"]
 }

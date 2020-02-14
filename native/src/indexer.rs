@@ -29,9 +29,11 @@ enum MessageMethod {
 pub(crate) fn handle_message(pack: &mut BoosterPack, message: Value) -> Result<Value, Error> {
     let method_str = as_str!(message, "method");
     let method = method_to_enum(&method_str);
+    let event_store = message["eventStore"].as_str().unwrap_or("default");
+    let indexer = pack.indexer.get_mut(event_store);
 
-    let res = match pack.indexer {
-        Some(ref mut indexer) => match method {
+    let res = match indexer {
+        Some(indexer) => match method {
             MessageMethod::LoadCheckpoints => indexer.load_checkpoints()?,
             MessageMethod::IsEventIndexEmpty => indexer.is_event_index_empty()?,
             MessageMethod::CommitLiveEvents => indexer.commit_live_events()?,
@@ -43,14 +45,14 @@ pub(crate) fn handle_message(pack: &mut BoosterPack, message: Value) -> Result<V
             MessageMethod::LoadFileEvents => indexer.load_file_events(message)?,
             MessageMethod::GetStats => indexer.get_stats()?,
             MessageMethod::CloseEventIndex => {
-                pack.indexer = None;
+                pack.indexer.remove(event_store);
                 json!(null)
             }
             MessageMethod::DeleteEventIndex => return Err(Error::CloseIndexBeforeDelete),
             MessageMethod::InitEventIndex => {
                 // re-initialize
-                pack.indexer = None;
-                init_event_index(pack, message)?
+                pack.indexer.remove(event_store);
+                init_event_index(pack, event_store, &message)?
             }
             MessageMethod::Unknown => {
                 return Err(Error::UnknownMethod {
@@ -59,17 +61,19 @@ pub(crate) fn handle_message(pack: &mut BoosterPack, message: Value) -> Result<V
             }
         },
         None => match method {
-            MessageMethod::InitEventIndex => init_event_index(pack, message)?,
-            MessageMethod::DeleteEventIndex => delete_event_index(message)?,
-            _ => return Err(Error::IndexerNotInitialized),
+            MessageMethod::DeleteEventIndex => delete_event_index(event_store)?,
+
+            // we just always initialize index, this covers e.g. when the webext
+            // updates. ideally updates and other restarts would be handled
+            // explicitly to make sure that no live events are missed
+            _ => init_event_index(pack, event_store, &message)?,
         },
     };
 
     Ok(res)
 }
 
-fn event_store_path(message: &Value) -> Result<PathBuf, Error> {
-    let event_store = message["eventStore"].as_str().unwrap_or("default");
+fn event_store_path(event_store: &str) -> Result<PathBuf, Error> {
     let mut path = match dirs::data_dir() {
         Some(path) => path,
         None => return Err(Error::UserDataDirNotFound),
@@ -80,8 +84,12 @@ fn event_store_path(message: &Value) -> Result<PathBuf, Error> {
     Ok(path)
 }
 
-fn init_event_index(pack: &mut BoosterPack, message: Value) -> Result<Value, Error> {
-    let path = event_store_path(&message)?;
+fn init_event_index(
+    pack: &mut BoosterPack,
+    event_store: &str,
+    message: &Value,
+) -> Result<Value, Error> {
+    let path = event_store_path(event_store)?;
     let mut config = Config::new();
     config = config.set_passphrase(
         message["passphrase"]
@@ -94,13 +102,17 @@ fn init_event_index(pack: &mut BoosterPack, message: Value) -> Result<Value, Err
         config = config.set_language(&language);
     }
 
-    pack.indexer = Some(Indexer::new(path, &config)?);
+    std::fs::create_dir_all(&path)?;
+    let indexer = Indexer::new(path, &config)?;
+    pack.indexer.insert(event_store.to_owned(), indexer);
     Ok(json!(null))
 }
 
-fn delete_event_index(message: Value) -> Result<Value, Error> {
-    let path = event_store_path(&message)?;
-    std::fs::remove_dir_all(path)?;
+fn delete_event_index(event_store: &str) -> Result<Value, Error> {
+    let path = event_store_path(event_store)?;
+    if path.exists() {
+        std::fs::remove_dir_all(path)?;
+    }
 
     Ok(json!(null))
 }
@@ -113,7 +125,6 @@ pub(crate) struct Indexer {
 impl Indexer {
     pub fn new<P: AsRef<Path>>(path: P, config: &Config) -> Result<Indexer, Error> {
         let path = path.as_ref();
-        std::fs::create_dir_all(path)?;
         let database = Database::new_with_config(path, &config)?;
         let connection = database.get_connection()?;
         Ok(Indexer {
@@ -467,12 +478,15 @@ mod tests {
 
     #[test]
     fn json_message_add_event_to_index() {
+        use std::collections::HashMap;
         use tempfile::tempdir;
 
         let tmpdir = tempdir().unwrap();
         std::env::set_var("HOME", tmpdir.path());
 
-        let mut pack = BoosterPack { indexer: None };
+        let mut pack = BoosterPack {
+            indexer: HashMap::new(),
+        };
         handle_message(
             &mut pack,
             json!({

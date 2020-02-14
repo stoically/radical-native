@@ -15,20 +15,24 @@
 #[macro_use]
 mod macros;
 
-mod error;
-mod indexer;
-mod native_messaging;
+use std::collections::HashMap;
 
 use error::Error;
 use indexer::Indexer;
 use native_messaging::{stdin, stdout_error, stdout_ready, stdout_reply};
 
+mod error;
+mod indexer;
+mod native_messaging;
+
 pub(crate) struct BoosterPack {
-    indexer: Option<Indexer>,
+    indexer: HashMap<String, Indexer>,
 }
 
 fn main() {
-    let mut pack = BoosterPack { indexer: None };
+    let mut pack = BoosterPack {
+        indexer: HashMap::new(),
+    };
     stdout_ready();
     loop {
         let (rpc_id, message_in) = match stdin() {
