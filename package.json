@@ -21,9 +21,14 @@
     "lint": "run-p lint:*",
     "lint:eslint": "eslint '{src,test}/**/*.ts'",
     "lint:tsc": "tsc",
-    "test": "ts-mocha --paths",
-    "test:watch": "npm run test -- --watch",
-    "test:coverage": "nyc npm run test"
+    "test": "run-p test:cargo test:webext",
+    "test:cargo": "cargo test",
+    "test:webext": "ts-mocha --paths",
+    "test:webext:watch": "npm run test:webext -- --watch",
+    "test:watch": "run-p test:watch:*",
+    "test:watch:cargo": "cargo watch -x test",
+    "test:coverage": "run-p test:coverage:*",
+    "test:coverage:webext": "nyc npm run test"
   },
   "devDependencies": {
     "@types/firefox-webext-browser": "^70.0.1",
