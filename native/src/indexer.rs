@@ -518,14 +518,6 @@ mod tests {
         )
         .unwrap();
 
-        handle_message(
-            &mut pack,
-            json!({
-                "method": "deleteEventIndex"
-            }),
-        )
-        .unwrap();
-
         assert_eq!(reply["eventCount"].as_i64().unwrap(), 1);
     }
 }
