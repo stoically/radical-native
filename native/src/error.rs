@@ -1,8 +1,8 @@
 #[derive(Debug)]
 pub(crate) enum Error {
-    ParseEvent,
-    ParseCheckpointDirection,
-    ParseLoadDirection,
+    ParseEvent { error: String },
+    ParseCheckpointDirection { error: String },
+    ParseLoadDirection { error: String },
     ParseSearchObject { error: String },
     SeshatError { error: String },
     SerdeError { error: String },

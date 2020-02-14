@@ -277,8 +277,9 @@ fn parse_event(event_json: &Value, profile_json: &Value) -> Result<(Event, Profi
         "m.room.name" => (EventType::Name, as_str!(event_content, "name"), None),
         "m.room.topic" => (EventType::Topic, as_str!(event_content, "topic"), None),
         _ => {
-            eprintln!("[extract_event] Unknown event type: {}", event_type);
-            return Err(Error::ParseEvent);
+            return Err(Error::ParseEvent {
+                error: format!("Unknown event type: {}", event_type),
+            });
         }
     };
 
@@ -309,8 +310,9 @@ fn parse_checkpoint_direction(direction: &str) -> Result<CheckpointDirection, Er
         "forwards" | "forward" | "f" => CheckpointDirection::Forwards,
         "" => CheckpointDirection::Backwards,
         d => {
-            eprintln!("Unknown checkpoint direction {}", d);
-            return Err(Error::ParseCheckpointDirection);
+            return Err(Error::ParseCheckpointDirection {
+                error: format!("Unknown checkpoint direction {}", d),
+            });
         }
     };
 
@@ -323,8 +325,9 @@ fn parse_load_direction(direction: &str) -> Result<LoadDirection, Error> {
         "forwards" | "forward" | "f" => LoadDirection::Forwards,
         "" => LoadDirection::Backwards,
         d => {
-            eprintln!("Unknown checkpoint direction {}", d);
-            return Err(Error::ParseLoadDirection);
+            return Err(Error::ParseLoadDirection {
+                error: format!("Unknown checkpoint direction {}", d),
+            });
         }
     };
 
