@@ -7,6 +7,12 @@ Pushing Riot Web beyond the limits of the web platform
 - [ ] Secure OS key storage (similar to e.g. [keytar](https://www.npmjs.com/package/keytar))
 - [ ] Tray icon
 
+Supported platforms
+
+- [x] Linux
+- [x] MacOS
+- [ ] Windows
+
 ## Install
 
 ### 1. SQLCipher
@@ -14,15 +20,21 @@ Pushing Riot Web beyond the limits of the web platform
 - Ubuntu/Debian: `apt install libsqlcipher0`
 - MacOS: `brew install sqlcipher`
 
-### 2. Native Helper
+SQLCipher is needed so that the search index can be encrypted on disk.
+
+### 2. Native Booster Pack Binary
 
 ```
-curl -sSf https://git.io/JvWXo | bash
+curl -LsSf https://git.io/JvWXo | bash
 ```
+
+This one-liner is a [simple shell script](https://github.com/stoically/riot-web-booster-pack/blob/master/native/scripts/install.sh) that downloads the [native booster pack binary from the releases](https://github.com/stoically/riot-web-booster-pack/releases), stores it, and generates a [native manifest](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_manifests#Manifest_location) pointing to the binary for Firefox, Chrome and Chromium.
 
 ### 3. WebExtension
 
-- [Get and install the Firefox Add-on Beta from Releases](https://github.com/stoically/riot-web-booster-pack/releases)
+- [Install the Firefox Add-on Beta from Releases](https://github.com/stoically/riot-web-booster-pack/releases)
+
+The WebExtension facilitates the communication between Riot Web and the Native Booster Pack Binary.
 
 ## Development
 
