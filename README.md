@@ -1,6 +1,6 @@
 # Radical Native
 
-Pushing Riot Web beyond the limits of the web platform
+Extending Riot Web with native messaging capabilities
 
 - [x] Search functionality in encrypted rooms using [seshat](https://github.com/matrix-org/seshat)
 - [ ] OS global keyboard shortcuts (e.g. push to talk)
