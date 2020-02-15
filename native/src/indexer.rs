@@ -6,8 +6,8 @@ use seshat::{
     Language, LoadConfig, LoadDirection, Profile, SearchConfig, SearchResult,
 };
 
-use crate::Radical;
 use crate::Error;
+use crate::Radical;
 
 enum MessageMethod {
     InitEventIndex,
@@ -493,7 +493,7 @@ mod tests {
                 "method": "initEventIndex"
             }),
         )
-        .unwrap();
+        .expect("initEventIndex");
 
         let profile = Profile::new("Alice", "");
         handle_message(
@@ -506,7 +506,7 @@ mod tests {
                 }
             }),
         )
-        .unwrap();
+        .expect("addEventToIndex");
 
         handle_message(
             &mut pack,
@@ -514,7 +514,7 @@ mod tests {
                 "method": "commitLiveEvents"
             }),
         )
-        .unwrap();
+        .expect("commitLiveEvents");
 
         let reply = handle_message(
             &mut pack,
@@ -522,7 +522,7 @@ mod tests {
                 "method": "getStats"
             }),
         )
-        .unwrap();
+        .expect("getStats");
 
         handle_message(
             &mut pack,
@@ -530,8 +530,8 @@ mod tests {
                 "method": "closeEventIndex"
             }),
         )
-        .unwrap();
+        .expect("closeEventIndex");
 
-        assert_eq!(reply["eventCount"].as_i64().unwrap(), 1);
+        assert_eq!(reply["eventCount"].as_i64().expect("eventCount"), 1);
     }
 }
