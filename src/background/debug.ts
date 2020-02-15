@@ -18,7 +18,7 @@ declare global {
   }
 }
 
-window.DEBUG = true;
+window.DEBUG = false;
 
 export const debug = (...args: any[]): void => {
   if (!window.DEBUG) {
