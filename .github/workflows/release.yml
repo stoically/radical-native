@@ -63,6 +63,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-          asset_path: ./target/release/riot-web-booster-pack
-          asset_name: riot-web-booster-pack_${{ matrix.config.release_uname }}
+          asset_path: ./target/release/radical-native
+          asset_name: radical-native_${{ matrix.config.release_uname }}
           asset_content_type: application/octet-stream

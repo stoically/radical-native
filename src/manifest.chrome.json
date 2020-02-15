@@ -1,7 +1,7 @@
 {
   "description": "Pushing Riot Web beyond the limits of the web platform",
   "manifest_version": 2,
-  "name": "Riot Booster Pack",
+  "name": "Radical Native",
   "version": "0.1",
   "background": {
     "scripts": ["browser-polyfill.min.js", "background.js"]

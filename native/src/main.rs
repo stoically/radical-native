@@ -11,12 +11,12 @@ mod error;
 mod indexer;
 mod native_messaging;
 
-pub(crate) struct BoosterPack {
+pub(crate) struct Radical {
     indexer: HashMap<String, Indexer>,
 }
 
 fn main() {
-    let mut pack = BoosterPack {
+    let mut pack = Radical {
         indexer: HashMap::new(),
     };
     stdout_ready();

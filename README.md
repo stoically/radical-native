@@ -1,4 +1,4 @@
-# Riot Booster Pack
+# Radical Native
 
 Pushing Riot Web beyond the limits of the web platform
 
@@ -13,6 +13,11 @@ Supported platforms
 - [x] MacOS
 - [ ] Windows
 
+Supported browsers
+
+- [x] Firefox
+- [ ] Chrome
+
 ## Install
 
 ### 1. SQLCipher
@@ -22,19 +27,19 @@ Supported platforms
 
 SQLCipher is needed so that the search index can be encrypted on disk.
 
-### 2. Native Booster Pack Binary
+### 2. Radical Native Binary
 
 ```
 curl -LsSf https://git.io/JvWXo | bash
 ```
 
-This one-liner is a [simple shell script](https://github.com/stoically/riot-web-booster-pack/blob/master/native/scripts/install.sh) that downloads the [native booster pack binary from the releases](https://github.com/stoically/riot-web-booster-pack/releases), stores it, and generates a [native manifest](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_manifests#Manifest_location) pointing to the binary for Firefox, Chrome and Chromium.
+This one-liner is a [simple shell script](https://github.com/stoically/radical-native/blob/master/native/scripts/install.sh) that downloads the [radical native binary from the releases](https://github.com/stoically/radical-native/releases), stores it, and generates a [native manifest](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_manifests#Manifest_location) pointing to the binary for Firefox, Chrome and Chromium.
 
 ### 3. WebExtension
 
-- [Install the Firefox Add-on Beta from Releases](https://github.com/stoically/riot-web-booster-pack/releases)
+- [Install the Firefox Add-on Beta from Releases](https://github.com/stoically/radical-native/releases)
 
-The WebExtension facilitates the communication between Riot Web and the Native Booster Pack Binary.
+The WebExtension facilitates the communication between Riot Web and the Radical Native Binary.
 
 ## Development
 

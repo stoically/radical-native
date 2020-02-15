@@ -6,7 +6,7 @@ use seshat::{
     Language, LoadConfig, LoadDirection, Profile, SearchConfig, SearchResult,
 };
 
-use crate::BoosterPack;
+use crate::Radical;
 use crate::Error;
 
 enum MessageMethod {
@@ -26,7 +26,7 @@ enum MessageMethod {
     Unknown,
 }
 
-pub(crate) fn handle_message(pack: &mut BoosterPack, message: Value) -> Result<Value, Error> {
+pub(crate) fn handle_message(pack: &mut Radical, message: Value) -> Result<Value, Error> {
     let method_str = as_str!(message, "method");
     let method = method_to_enum(&method_str);
     let event_store = message["eventStore"].as_str().unwrap_or("default");
@@ -78,14 +78,14 @@ fn event_store_path(event_store: &str) -> Result<PathBuf, Error> {
         Some(path) => path,
         None => return Err(Error::UserDataDirNotFound),
     };
-    path.push("riot-web-booster-pack");
+    path.push("radical-native");
     path.push("EventStore");
     path.push(event_store);
     Ok(path)
 }
 
 fn init_event_index(
-    pack: &mut BoosterPack,
+    pack: &mut Radical,
     event_store: &str,
     message: &Value,
 ) -> Result<Value, Error> {
@@ -484,7 +484,7 @@ mod tests {
         let tmpdir = tempdir().unwrap();
         std::env::set_var("HOME", tmpdir.path());
 
-        let mut pack = BoosterPack {
+        let mut pack = Radical {
             indexer: HashMap::new(),
         };
         handle_message(

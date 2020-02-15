@@ -19,43 +19,43 @@ case "$OSTYPE" in
             else
               DATA_HOME="$XDG_DATA_HOME"
             fi
-            RELEASE_BIN_NAME="riot-web-booster-pack_linux-x86_64"
+            RELEASE_BIN_NAME="radical-native_linux-x86_64"
             ;;
   darwin*)  echo "OS: OSX"
             DATA_HOME="$HOME/Library/Application Support"
-            RELEASE_BIN_NAME="riot-web-booster-pack_mac"
+            RELEASE_BIN_NAME="radical-native_mac"
             ;; 
   *)        echo "Unsupported OS: $OSTYPE"
             exit 1
             ;;
 esac
 
-HOST_BIN_HOME="$DATA_HOME/riot-web-booster-pack"
+HOST_BIN_HOME="$DATA_HOME/radical-native"
 mkdir -p "$HOST_BIN_HOME"
-NATIVE_MANIFEST_NAME="im.riot.booster.pack"
+NATIVE_MANIFEST_NAME="radical.native"
 NATIVE_MANIFEST_FILENAME="$NATIVE_MANIFEST_NAME.json"
 
-echo "Installing riot-web-booster-pack"
+echo "Installing radical-native"
 if [ $local_bin = 1 ]; then
   if [ $release_bin = 0 ]; then
-    NATIVE_HOST_APP_BIN="$PWD/target/debug/riot-web-booster-pack"
+    NATIVE_HOST_APP_BIN="$PWD/target/debug/radical-native"
   else
-    NATIVE_HOST_APP_BIN="$PWD/target/release/riot-web-booster-pack"
+    NATIVE_HOST_APP_BIN="$PWD/target/release/radical-native"
   fi
   echo "Using local $NATIVE_HOST_APP_BIN"
 else
   ORG="stoically"
-  REPO="riot-web-booster-pack"
+  REPO="radical-native"
   NATIVE_HOST_APP_BIN="$HOST_BIN_HOME/$RELEASE_BIN_NAME"
   LATEST_RELEASE_VERSION=$(curl -s https://api.github.com/repos/$ORG/$REPO/releases | grep -oP -m1  '"tag_name": "\K(.*)(?=")')
   curl -L -o "$NATIVE_HOST_APP_BIN" "https://github.com/$ORG/$REPO/releases/download/$LATEST_RELEASE_VERSION/$RELEASE_BIN_NAME"
   chmod +x "$NATIVE_HOST_APP_BIN"
-  echo "Installed riot-web-booster-pack to: $NATIVE_HOST_APP_BIN"
+  echo "Installed radical-native to: $NATIVE_HOST_APP_BIN"
 fi
 
 install() {
   if [ "$1" = "firefox" ]; then
-    ALLOWED='"allowed_extensions": [ "@riot-booster-pack" ]'
+    ALLOWED='"allowed_extensions": [ "@radical-native" ]'
     case "$OSTYPE" in
       linux*)   NATIVE_HOSTS_PATH="$HOME/.mozilla/native-messaging-hosts" ;;
       darwin*)  NATIVE_HOSTS_PATH="$HOME/Library/Application Support/Mozilla/NativeMessagingHosts" ;; 
@@ -79,7 +79,7 @@ install() {
   NATIVE_MANIFEST=$(cat <<-END
   {
     "name": "$NATIVE_MANIFEST_NAME",
-    "description": "Riot Web Booster Pack",
+    "description": "Radical Native",
     "path": "$NATIVE_HOST_APP_BIN",
     "type": "stdio",
     $ALLOWED
@@ -94,5 +94,5 @@ END
 }
 
 install "firefox"
-install "chrome"
-install "chromium"
+#install "chrome"
+#install "chromium"

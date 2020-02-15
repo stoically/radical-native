@@ -1,11 +1,11 @@
 {
   "description": "Pushing Riot Web beyond the limits of the web platform",
   "manifest_version": 2,
-  "name": "Riot Booster Pack",
+  "name": "Radical Native",
   "version": "0.1beta3",
   "applications": {
     "gecko": {
-      "id": "@riot-booster-pack",
+      "id": "@radical-native",
       "strict_min_version": "68.0"
     }
   },

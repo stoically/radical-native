@@ -21,7 +21,7 @@ export class SeshatPort {
   }
 
   private init(): void {
-    this.port = browser.runtime.connectNative("im.riot.booster.pack");
+    this.port = browser.runtime.connectNative("radical.native");
     this.port.onDisconnect.addListener(this.handleDisconnect.bind(this));
     this.port.onMessage.addListener(this.handleMessage.bind(this));
   }
