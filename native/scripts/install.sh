@@ -47,8 +47,8 @@ else
   ORG="stoically"
   REPO="radical-native"
   NATIVE_HOST_APP_BIN="$HOST_BIN_HOME/$RELEASE_BIN_NAME"
-  LATEST_RELEASE_VERSION=$(curl -s https://api.github.com/repos/$ORG/$REPO/releases | grep -oP -m1  '"tag_name": "\K(.*)(?=")')
-  curl -L -o "$NATIVE_HOST_APP_BIN" "https://github.com/$ORG/$REPO/releases/download/$LATEST_RELEASE_VERSION/$RELEASE_BIN_NAME"
+  LATEST_RELEASE_VERSION=$(curl -s https://api.github.com/repos/$ORG/$REPO/releases | grep -m1 '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | cut -c 2-)
+  curl -L -o "$NATIVE_HOST_APP_BIN" "https://github.com/$ORG/$REPO/releases/download/v$LATEST_RELEASE_VERSION/$RELEASE_BIN_NAME"
   chmod +x "$NATIVE_HOST_APP_BIN"
   echo "Installed radical-native to: $NATIVE_HOST_APP_BIN"
 fi
