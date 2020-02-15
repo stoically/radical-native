@@ -33,7 +33,7 @@ SQLCipher is needed so that the search index can be encrypted on disk.
 curl -LsSf https://git.io/JvWXo | bash
 ```
 
-This one-liner is a [simple shell script](https://github.com/stoically/radical-native/blob/master/native/scripts/install.sh) that downloads the [radical native binary from the releases](https://github.com/stoically/radical-native/releases), stores it, and generates a [native manifest](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_manifests#Manifest_location) pointing to the binary for Firefox, Chrome and Chromium.
+This one-liner is a [simple shell script](https://github.com/stoically/radical-native/blob/master/native/scripts/install.sh) that downloads the [radical native binary from the releases](https://github.com/stoically/radical-native/releases), stores it, and generates a [native manifest](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_manifests#Manifest_location) pointing to the binary for Firefox.
 
 ### 3. WebExtension
 
