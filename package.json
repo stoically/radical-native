@@ -24,9 +24,9 @@
     "test": "run-p test:cargo test:webext",
     "test:cargo": "cargo test",
     "test:webext": "ts-mocha --paths",
-    "test:webext:watch": "npm run test:webext -- --watch",
     "test:watch": "run-p test:watch:*",
     "test:watch:cargo": "cargo watch -x test",
+    "test:watch:webext": "npm run test:webext -- --watch",
     "test:coverage": "run-p test:coverage:*",
     "test:coverage:webext": "nyc npm run test"
   },
