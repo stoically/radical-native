@@ -16,7 +16,7 @@ pub(crate) struct Radical {
 }
 
 fn main() {
-    let mut pack = Radical {
+    let mut radical = Radical {
         indexer: HashMap::new(),
     };
     stdout_ready();
@@ -29,7 +29,7 @@ fn main() {
             }
         };
 
-        let reply = indexer::handle_message(&mut pack, message_in);
+        let reply = indexer::handle_message(&mut radical, message_in);
 
         match reply {
             Ok(reply) => stdout_reply(rpc_id, reply),

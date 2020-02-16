@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde_json::{json, Value};
 use seshat::{
@@ -26,13 +26,22 @@ enum MessageMethod {
     Unknown,
 }
 
-pub(crate) fn handle_message(pack: &mut Radical, message: Value) -> Result<Value, Error> {
+pub(crate) fn handle_message(radical: &mut Radical, message: Value) -> Result<Value, Error> {
     let method_str = as_str!(message, "method");
     let method = method_to_enum(&method_str);
     let event_store = message["eventStore"].as_str().unwrap_or("default");
-    let indexer = pack.indexer.get_mut(event_store);
+    let indexer = radical.indexer.get_mut(event_store);
 
     let res = match indexer {
+        None => match method {
+            MessageMethod::InitEventIndex => {
+                let indexer = Indexer::new(event_store, &message)?;
+                radical.indexer.insert(event_store.to_owned(), indexer);
+                json!(null)
+            }
+            MessageMethod::DeleteEventIndex => Indexer::delete_event_index(event_store)?,
+            _ => return Err(Error::IndexNotInitialized),
+        },
         Some(indexer) => match method {
             MessageMethod::LoadCheckpoints => indexer.load_checkpoints()?,
             MessageMethod::IsEventIndexEmpty => indexer.is_event_index_empty()?,
@@ -45,76 +54,20 @@ pub(crate) fn handle_message(pack: &mut Radical, message: Value) -> Result<Value
             MessageMethod::LoadFileEvents => indexer.load_file_events(message)?,
             MessageMethod::GetStats => indexer.get_stats()?,
             MessageMethod::CloseEventIndex => {
-                pack.indexer.remove(event_store);
+                radical.indexer.remove(event_store);
                 json!(null)
             }
             MessageMethod::DeleteEventIndex => return Err(Error::CloseIndexBeforeDelete),
-            MessageMethod::InitEventIndex => {
-                // re-initialize
-                pack.indexer.remove(event_store);
-                init_event_index(pack, event_store, &message)?
-            }
+            MessageMethod::InitEventIndex => json!(null), // no-op
             MessageMethod::Unknown => {
                 return Err(Error::UnknownMethod {
                     error: format!("Unknown method: {}", method_str),
                 })
             }
         },
-        None => match method {
-            MessageMethod::DeleteEventIndex => delete_event_index(event_store)?,
-
-            // we just always initialize index, this covers e.g. when the webext
-            // updates. ideally updates and other restarts would be handled
-            // explicitly to make sure that no live events are missed
-            _ => init_event_index(pack, event_store, &message)?,
-        },
     };
 
     Ok(res)
-}
-
-fn event_store_path(event_store: &str) -> Result<PathBuf, Error> {
-    let mut path = match dirs::data_dir() {
-        Some(path) => path,
-        None => return Err(Error::UserDataDirNotFound),
-    };
-    path.push("radical-native");
-    path.push("EventStore");
-    path.push(event_store);
-    Ok(path)
-}
-
-fn init_event_index(
-    pack: &mut Radical,
-    event_store: &str,
-    message: &Value,
-) -> Result<Value, Error> {
-    let path = event_store_path(event_store)?;
-    let mut config = Config::new();
-    config = config.set_passphrase(
-        message["passphrase"]
-            .as_str()
-            .unwrap_or("DEFAULT_PASSPHRASE"),
-    );
-
-    if let Some(language) = message["language"].as_str() {
-        let language = Language::from(language);
-        config = config.set_language(&language);
-    }
-
-    std::fs::create_dir_all(&path)?;
-    let indexer = Indexer::new(path, &config)?;
-    pack.indexer.insert(event_store.to_owned(), indexer);
-    Ok(json!(null))
-}
-
-fn delete_event_index(event_store: &str) -> Result<Value, Error> {
-    let path = event_store_path(event_store)?;
-    if path.exists() {
-        std::fs::remove_dir_all(path)?;
-    }
-
-    Ok(json!(null))
 }
 
 pub(crate) struct Indexer {
@@ -123,14 +76,47 @@ pub(crate) struct Indexer {
 }
 
 impl Indexer {
-    pub fn new<P: AsRef<Path>>(path: P, config: &Config) -> Result<Indexer, Error> {
-        let path = path.as_ref();
+    pub fn new(event_store: &str, message: &Value) -> Result<Indexer, Error> {
+        let mut config = Config::new();
+        config = config.set_passphrase(
+            message["passphrase"]
+                .as_str()
+                .unwrap_or("DEFAULT_PASSPHRASE"),
+        );
+        if let Some(language) = message["language"].as_str() {
+            let language = Language::from(language);
+            config = config.set_language(&language);
+        }
+
+        let path = Indexer::event_store_path(event_store)?;
+        std::fs::create_dir_all(&path)?;
+
         let database = Database::new_with_config(path, &config)?;
         let connection = database.get_connection()?;
         Ok(Indexer {
             database,
             connection,
         })
+    }
+
+    fn event_store_path(event_store: &str) -> Result<PathBuf, Error> {
+        let mut path = match dirs::data_dir() {
+            Some(path) => path,
+            None => return Err(Error::UserDataDirNotFound),
+        };
+        path.push("radical-native");
+        path.push("EventStore");
+        path.push(event_store);
+        Ok(path)
+    }
+
+    fn delete_event_index(event_store: &str) -> Result<Value, Error> {
+        let path = Indexer::event_store_path(event_store)?;
+        if path.exists() {
+            std::fs::remove_dir_all(path)?;
+        }
+
+        Ok(json!(null))
     }
 
     fn load_checkpoints(&mut self) -> Result<Value, Error> {

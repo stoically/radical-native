@@ -10,6 +10,7 @@ pub(crate) enum Error {
     MissingField { error: String },
     UnknownMethod { error: String },
     IoError { error: String },
+    IndexNotInitialized,
     CloseIndexBeforeDelete,
     UserDataDirNotFound,
 }
