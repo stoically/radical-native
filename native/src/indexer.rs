@@ -475,19 +475,54 @@ mod tests {
         })
     }
 
-    #[test]
-    fn json_message_add_event_to_index() {
-        use std::collections::HashMap;
-        use tempfile::tempdir;
+    fn checkpoint() -> Value {
+        json!({
+            "checkpoint": {
+                "roomId": "!FDVbSkWZSIcwvBFMdt:localhost",
+                "token": "123",
+                "fullCrawl": false,
+                "direction": "b"
+            }
+        })
+    }
 
+    fn setup() {
+        use tempfile::tempdir;
         let tmpdir = tempdir().unwrap();
         std::env::set_var("HOME", tmpdir.path());
+    }
 
-        let mut pack = Radical {
+    #[test]
+    fn crawler_checkpoints() {
+        setup();
+        let mut indexer = Indexer::new("test_passphrase", &json!({})).expect("indexer");
+        let checkpoint = checkpoint();
+
+        indexer
+            .add_crawler_checkpoint(json!({
+                "content": checkpoint.clone()
+            }))
+            .expect("add_crawler_checkpoint");
+        indexer
+            .remove_crawler_checkpoint(json!({
+                "content": checkpoint.clone()
+            }))
+            .expect("remove_crawler_checkpoint");
+
+        let checkpoints = indexer.load_checkpoints().expect("load_checkpoints");
+        let count = checkpoints.as_array().expect("checkpoints.as_array").len();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn json_messages() {
+        setup();
+        use std::collections::HashMap;
+        let mut radical = Radical {
             indexer: HashMap::new(),
         };
         handle_message(
-            &mut pack,
+            &mut radical,
             json!({
                 "method": "initEventIndex"
             }),
@@ -496,7 +531,7 @@ mod tests {
 
         let profile = Profile::new("Alice", "");
         handle_message(
-            &mut pack,
+            &mut radical,
             json!({
                 "method": "addEventToIndex",
                 "content": {
@@ -508,29 +543,49 @@ mod tests {
         .expect("addEventToIndex");
 
         handle_message(
-            &mut pack,
+            &mut radical,
             json!({
                 "method": "commitLiveEvents"
             }),
         )
         .expect("commitLiveEvents");
 
+        let checkpoint = checkpoint();
+        handle_message(
+            &mut radical,
+            json!({
+                "method": "addCrawlerCheckpoint",
+                "content": checkpoint
+            }),
+        )
+        .expect("addCrawlerCheckpoint");
+
+        handle_message(
+            &mut radical,
+            json!({
+                "method": "removeCrawlerCheckpoint",
+                "content": checkpoint
+            }),
+        )
+        .expect("removeCrawlerCheckpoint");
+
+        let checkpoints = handle_message(
+            &mut radical,
+            json!({
+                "method": "loadCheckpoints"
+            }),
+        )
+        .expect("loadCheckpoints");
+
         let reply = handle_message(
-            &mut pack,
+            &mut radical,
             json!({
                 "method": "getStats"
             }),
         )
         .expect("getStats");
 
-        handle_message(
-            &mut pack,
-            json!({
-                "method": "closeEventIndex"
-            }),
-        )
-        .expect("closeEventIndex");
-
+        assert_eq!(checkpoints.as_array().expect("checkpoints").len(), 0);
         assert_eq!(reply["eventCount"].as_i64().expect("eventCount"), 1);
     }
 }
