@@ -135,7 +135,20 @@ impl Indexer {
 
     fn load_checkpoints(&mut self) -> Result<Value, Error> {
         let checkpoints = self.connection.load_checkpoints()?;
-        Ok(serde_json::to_value(&checkpoints)?)
+        let mut checkpoints_json = Vec::new();
+        for checkpoint in checkpoints {
+            let direction = match checkpoint.direction {
+                CheckpointDirection::Backwards => "b",
+                CheckpointDirection::Forwards => "f",
+            };
+            checkpoints_json.push(json!({
+                "roomId": checkpoint.room_id,
+                "token": checkpoint.token,
+                "fullCrawl": checkpoint.full_crawl,
+                "direction": direction,
+            }));
+        }
+        Ok(serde_json::to_value(&checkpoints_json)?)
     }
 
     fn is_event_index_empty(&mut self) -> Result<Value, Error> {
