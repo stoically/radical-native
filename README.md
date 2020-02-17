@@ -48,27 +48,21 @@ Hint: The binary and event store are saved into the `radical-native` directory i
 
 The Radical Native Firefox Add-on facilitates the communication between Riot Web and the Radical Native Binary.
 
-### 4. Radical Add-on
+### Riot Web over HTTP
 
-1. [Install the latest Radical Firefox Add-on](https://addons.mozilla.org/firefox/addon/radical-web/)
-2. Configure the Riot Web config in the Radical Add-on preferences to include
+- Open any Riot website in your browser
+- Click the Radical Native icon in the toolbar (RAM icon)
+- Riot website should reload and icon should have an "on" badge
+- Check Riot's "Settings > Security & Privacy > Message search > Manage", it should show [ongoing work](https://github.com/vector-im/riot-web/issues/12334)
 
-  ```
-    "features": {
-      "feature_event_indexing": "labs"
-    }
-  ```
+### Radical Add-on
 
-3. Open/Reload an Riot tab, Login, go to "Settings > Labs" and toggle the "Enable local event indexing and E2EE search" feature
-4. Reload Riot tab, go to "Settings > Security & Privacy", there you should see a "Manage" button under "Message search", clicking it should show ongoing work (when it's done indexing it says ["Indexed rooms: 0 out of N"](https://github.com/vector-im/riot-web/issues/12334))
-
-The Radical Firefox Add-on bundles Riot Web and provides the needed patches to make search in encrypted rooms work.
+- See https://github.com/stoically/radical#search
 
 ### Troubleshooting
 
 - Check the console output from step 3 and try to execute the radical native binary directly (the path mentioned after "Installed to:") - it should respond with "ready: true"
-- Check the Radical Native console for error logs: `about:debugging` > This Firefox > Radical Native Inspect
-- Try restarting Firefox with both Add-ons installed and enabled
+- Check the Radical Native console for error logs: `about:debugging#/runtime/this-firefox` > Radical Native Inspect
 - If indexing gets stuck you can safely disable and enable it in the "Manage" dialog
 
 
@@ -101,3 +95,7 @@ npm run test
 # once & coverage
 npm run test:coverage
 ```
+
+## Attribution
+
+Icon made by [Freepik](https://www.flaticon.com/authors/freepik) from [www.flaticon.com](https://www.flaticon.com/)

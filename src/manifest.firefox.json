@@ -3,14 +3,35 @@
   "manifest_version": 2,
   "name": "Radical Native",
   "version": "0.1beta4",
-  "applications": {
-    "gecko": {
-      "id": "@radical-native",
-      "strict_min_version": "68.0"
+  "browser_action": {
+    "default_title": "Radical Native",
+    "default_icon": {
+      "32": "icons/32.png"
     }
   },
   "background": {
     "scripts": ["background.js"]
   },
-  "permissions": ["contextualIdentities", "management", "nativeMessaging"]
+  "permissions": [
+    "activeTab",
+    "contextualIdentities",
+    "cookies",
+    "management",
+    "nativeMessaging",
+    "storage",
+    "webRequest",
+    "webRequestBlocking"
+  ],
+  "optional_permissions": [
+    "<all_urls>"
+  ],
+  "web_accessible_resources": [
+    "resources/*"
+  ],
+  "applications": {
+    "gecko": {
+      "id": "@radical-native",
+      "strict_min_version": "68.0"
+    }
+  }
 }

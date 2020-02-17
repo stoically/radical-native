@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde_json::{json, Value};
 use seshat::{
@@ -495,7 +495,7 @@ mod tests {
         })
     }
 
-    fn indexer(tmpdir: &Path) -> Indexer {
+    fn indexer(tmpdir: &std::path::Path) -> Indexer {
         let mut config = Config::new();
         config = config.set_passphrase("TEST_PASS");
         Indexer::new_in_path(tmpdir.to_path_buf(), config).expect("indexer")

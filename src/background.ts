@@ -1,3 +1,3 @@
 import { Background } from "./background/lib";
 
-new Background();
+new Background().initialize();

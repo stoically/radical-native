@@ -10,7 +10,8 @@ export class SeshatPort {
     this.init();
   }
 
-  async handleExternalMessage(message: any): Promise<any> {
+  async handleRuntimeMessage(message: any): Promise<any> {
+    debug("message for seshat received", message);
     switch (message.method) {
       case "supportsEventIndexing":
         return this.ready;
@@ -43,6 +44,7 @@ export class SeshatPort {
         resolve,
         reject,
       });
+      debug("posting to radical.native", message);
       this.port?.postMessage(message);
     });
   }

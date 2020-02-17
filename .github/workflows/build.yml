@@ -22,5 +22,5 @@ jobs:
           sudo apt-get install libsqlcipher-dev libsqlcipher0
           npm install
           npm run lint
-          npm run test:coverage
+          npm run test
           npm run build

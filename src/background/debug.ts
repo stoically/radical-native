@@ -10,5 +10,5 @@ export const debug = (...args: any[]): void => {
   if (!window.DEBUG) {
     return;
   }
-  console.log(...args);
+  console.log("[RadicalNative::background]", ...args);
 };
