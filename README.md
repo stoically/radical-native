@@ -50,7 +50,7 @@ The Radical Native Firefox Add-on facilitates the communication between Riot Web
 
 ### 4. Radical Add-on
 
-1. [Install the latest Radical Firefox Add-on](https://github.com/stoically/radical/releases)
+1. [Install the latest Radical Firefox Add-on](https://addons.mozilla.org/firefox/addon/radical-web/)
 2. Configure the Riot Web config in the Radical Add-on preferences to include
 
   ```
