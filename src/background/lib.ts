@@ -48,7 +48,7 @@ export class Background {
                   sender.tab!.cookieStoreId!
                 : "default";
             message.content.eventStore = `web-${encodeURIComponent(
-              url.origin
+              `${url.origin}${url.pathname}`
             )}-${cookieStore}`;
 
             return this.seshat.handleRuntimeMessage(message.content);
