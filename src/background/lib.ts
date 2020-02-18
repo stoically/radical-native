@@ -41,6 +41,16 @@ export class Background {
         debug("internal message received", message, sender);
         switch (message.type) {
           case "seshat":
+            const url = new URL(sender.url!);
+            const cookieStore =
+              this.browserType === "firefox"
+                ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                  sender.tab!.cookieStoreId!
+                : "default";
+            message.content.eventStore = `web-${encodeURIComponent(
+              url.origin
+            )}-${cookieStore}`;
+
             return this.seshat.handleRuntimeMessage(message.content);
         }
       }
