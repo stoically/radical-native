@@ -231,6 +231,8 @@ export class Background {
         tabId: tab.id!,
         text: null,
       });
+
+      this.riotTabs.delete(tab.id!);
     }
 
     await browser.storage.local.set({ riots: this.riots });
