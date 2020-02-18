@@ -21,7 +21,7 @@ Extending Riot Web with native messaging capabilities
 #### Supported Riots
 
 - [x] [Radical](https://github.com/stoically/radical): Riot Web bundled as Firefox Add-on
-- [ ] Riot Web over HTTP
+- [x] Riot Web over HTTP
 
 ## Install
 
