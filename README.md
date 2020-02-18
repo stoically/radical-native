@@ -2,6 +2,10 @@
 
 Extending Riot Web with native messaging capabilities
 
+- Matrix Room: [#radical-webext:matrix.org](https://matrix.to/#/#radical-webext:matrix.org)
+
+#### Features
+
 - [x] Search functionality in encrypted rooms using [seshat](https://github.com/matrix-org/seshat)
 - [ ] OS global keyboard shortcuts (e.g. push to talk)
 - [ ] Secure OS key storage (similar to e.g. [keytar](https://www.npmjs.com/package/keytar))
