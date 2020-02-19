@@ -73,8 +73,8 @@ The Radical Native Firefox Add-on facilitates the communication between Riot Web
 
 ## Development
 
-Ubuntu/Debian: `apt install libsqlcipher0 libsqlcipher-dev`
-MacOS: `brew install libsqlcipher`
+- Ubuntu/Debian: `apt install libsqlcipher0 libsqlcipher-dev`
+- MacOS: `brew install libsqlcipher`
 
 ```
 npm install
