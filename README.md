@@ -52,6 +52,8 @@ Hint: The binary and event store are saved into the `radical-native` directory i
 
 The Radical Native Firefox Add-on facilitates the communication between Riot Web and the Radical Native Binary.
 
+## Usage
+
 ### Riot Web over HTTP
 
 - Open any Riot website in your browser
@@ -63,12 +65,11 @@ The Radical Native Firefox Add-on facilitates the communication between Riot Web
 
 - See https://github.com/stoically/radical#search
 
-### Troubleshooting
+## Troubleshooting
 
-- Check the console output from step 3 and try to execute the radical native binary directly (the path mentioned after "Installed to:") - it should respond with "ready: true"
+- Check the console output from install step 2 and try to execute the radical native binary directly (the path mentioned after "Installed to:") - it should respond with "ready: true"
 - Check the Radical Native console for error logs: `about:debugging#/runtime/this-firefox` > Radical Native Inspect
 - If indexing gets stuck you can safely disable and enable it in the "Manage" dialog
-
 
 ## Development
 
@@ -85,7 +86,6 @@ npm run dev
 ### Chrome
 
 - Load the build located in `build/chrome` as Unpacked extension via `chrome://extensions/`
-
 
 ## Tests
 
