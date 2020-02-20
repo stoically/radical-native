@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from "uuid";
 import { debug } from "./debug";
 import { Management } from "./management";
 import { SeshatPort } from "./ports/seshat";
@@ -9,13 +10,73 @@ export class Background {
   public management = new Management();
   public seshat = new SeshatPort();
 
+  private uuid!: string;
   private initialized = false;
+  private initializedPromise: Promise<void>;
   private bundleResourceURL = browser.runtime.getURL("resources/bundle.js");
   private riots: any[] = [];
   private riotTabs: Set<number> = new Set();
 
   constructor() {
-    browser.storage.local.set({ version: this.version });
+    this.initializedPromise = new Promise(this.initialize.bind(this));
+    this.setupListeners();
+  }
+
+  private async initialize(resolve: any, reject: any): Promise<void> {
+    try {
+      const storage = await browser.storage.local.get();
+      if (storage.uuid) {
+        this.uuid = storage.uuid;
+      } else {
+        this.uuid = uuidv4();
+        await browser.storage.local.set({ uuid: this.uuid });
+      }
+
+      if (!storage.version || storage.version !== this.version) {
+        await browser.storage.local.set({ version: this.version });
+      }
+
+      if (storage.riots) {
+        this.riots = storage.riots;
+      }
+    } catch (error) {
+      reject(`unrecoverable storage error: ${error.toString()}`);
+      throw error;
+    }
+    this.initialized = true;
+    resolve();
+  }
+
+  private setupListeners(): void {
+    browser.webRequest.onBeforeRequest.addListener(
+      async (details: any): Promise<browser.webRequest.BlockingResponse> => {
+        if (!this.initialized) {
+          debug("incoming request, waiting for initialization", details);
+          await this.initializedPromise;
+        }
+
+        if (
+          this.browserType === "firefox" &&
+          details.url.includes("/config.json?cachebuster=")
+        ) {
+          debug("incoming config request", details);
+          return this.riotConfigListener(details);
+        }
+
+        if (details.url.endsWith("/bundle.js")) {
+          debug("incoming bundle request", details);
+          return this.riotBundleListener(details);
+        }
+
+        return {};
+      },
+      {
+        urls: ["<all_urls>"],
+        types: ["script", "xmlhttprequest"],
+      },
+      ["blocking"]
+    );
+
     browser.runtime.onMessageExternal.addListener(
       this.handleExternalMessage.bind(this)
     );
@@ -47,7 +108,7 @@ export class Background {
                 ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                   sender.tab!.cookieStoreId!
                 : "default";
-            message.content.eventStore = `web-${encodeURIComponent(
+            message.content.eventStore = `web-${this.uuid}-${encodeURIComponent(
               `${url.origin}${url.pathname}`
             )}-${cookieStore}`;
 
@@ -57,53 +118,7 @@ export class Background {
     );
   }
 
-  async initialize(): Promise<void> {
-    const initializedPromise = new Promise(async (resolve: any) => {
-      try {
-        this.riots = await this.getStoredRiots();
-      } catch (error) {
-        debug("initializing failed", error);
-      }
-      this.initialized = true;
-      resolve();
-    });
-
-    browser.webRequest.onBeforeRequest.addListener(
-      async (details: any): Promise<browser.webRequest.BlockingResponse> => {
-        if (!this.initialized) {
-          debug("incoming request, waiting for initialization", details);
-          await initializedPromise;
-        }
-
-        if (
-          this.browserType === "firefox" &&
-          details.url.includes("/config.json?cachebuster=")
-        ) {
-          debug("incoming config request", details);
-          return this.riotConfigListener(details);
-        }
-
-        if (details.url.endsWith("/bundle.js")) {
-          debug("incoming bundle request", details);
-          return this.riotBundleListener(details);
-        }
-
-        return {};
-      },
-      {
-        urls: ["<all_urls>"],
-        types: ["script", "xmlhttprequest"],
-      },
-      ["blocking"]
-    );
-  }
-
-  async getStoredRiots(): Promise<any> {
-    const { riots } = await browser.storage.local.get("riots");
-    return riots || [];
-  }
-
-  async riotConfigListener(details: {
+  private async riotConfigListener(details: {
     requestId: string;
   }): Promise<browser.webRequest.BlockingResponse> {
     const filter = browser.webRequest.filterResponseData(
@@ -133,12 +148,10 @@ export class Background {
         if (!config.features) {
           config.features = {};
         }
-        if (!config.features.feature_event_indexing) {
-          // eslint-disable-next-line @typescript-eslint/camelcase
-          config.features.feature_event_indexing = "enable";
-          configStr = JSON.stringify(config, null, 2);
-          debug("added indexing feature to config.json");
-        }
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        config.features.feature_event_indexing = "enable";
+        configStr = JSON.stringify(config, null, 2);
+        debug("added indexing feature to config.json");
       } catch (error) {
         // no-op
       }
@@ -150,7 +163,7 @@ export class Background {
     return {};
   }
 
-  async riotBundleListener(details: {
+  private async riotBundleListener(details: {
     url: string;
     tabId: number;
   }): Promise<browser.webRequest.BlockingResponse> {
@@ -180,13 +193,18 @@ export class Background {
     };
   }
 
-  handleExternalMessage(
+  private async handleExternalMessage(
     message: any,
     sender: browser.runtime.MessageSender
-  ): any {
+  ): Promise<any> {
     debug("external message received", message, sender);
     if (sender.id !== "@riot-webext") {
       throw new Error("Access denied");
+    }
+
+    if (!this.initialized) {
+      debug("waiting for initialization", message, sender);
+      await this.initializedPromise;
     }
 
     switch (message.type) {
@@ -195,21 +213,21 @@ export class Background {
     }
   }
 
-  async onBrowserActionClick(tab: browser.tabs.Tab): Promise<void> {
+  private async onBrowserActionClick(tab: browser.tabs.Tab): Promise<void> {
     debug("browser action clicked", tab);
     const url = new URL(tab.url!);
     const riot = {
       protocol: url.protocol,
       hostname: url.hostname,
       pathname: url.pathname,
-      bundleURL: `${url.protocol}//${url.hostname}${url.pathname}bundles/*/bundle.js`,
       cookieStoreId: tab.cookieStoreId || false,
     };
     const pattern = `${riot.protocol}//${riot.hostname}${riot.pathname}*`;
+    const origins = [pattern];
 
     if (!this.riotTabs.has(tab.id!)) {
       const granted = await browser.permissions.request({
-        origins: [pattern],
+        origins,
       });
       if (!granted) {
         return;
@@ -225,7 +243,7 @@ export class Background {
         );
       });
       browser.permissions.remove({
-        origins: [pattern],
+        origins,
       });
       browser.browserAction.setBadgeText({
         tabId: tab.id!,

@@ -1,3 +1,9 @@
 import { Background } from "./background/lib";
 
-new Background().initialize();
+declare global {
+  interface Window {
+    bg: Background;
+  }
+}
+
+window.bg = new Background();

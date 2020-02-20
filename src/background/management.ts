@@ -19,14 +19,16 @@ export class Management {
       });
   }
 
-  handleRiotWebExt(extensionInfo: browser.management.ExtensionInfo): void {
+  private handleRiotWebExt(
+    extensionInfo: browser.management.ExtensionInfo
+  ): void {
     if (extensionInfo.id !== RIOT_WEBEXT_ID) {
       return;
     }
     this.sendReadyMessage();
   }
 
-  sendReadyMessage(): void {
+  private sendReadyMessage(): void {
     browser.runtime.sendMessage(RIOT_WEBEXT_ID, {
       method: "ready",
     });
