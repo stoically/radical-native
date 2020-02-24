@@ -1,8 +1,8 @@
 # Radical Native
 
-Extending Riot Web with native messaging capabilities
+[![Radical Native Matrix room #radical-webext:matrix.org](https://img.shields.io/matrix/radical-webext:matrix.org.svg?label=%23radical-webext:matrix.org&logo=matrix&server_fqdn=matrix.org)](https://matrix.to/#/#radical-webext:matrix.org)
 
-- Matrix Room: [#radical-webext:matrix.org](https://matrix.to/#/#radical-webext:matrix.org)
+Extending Riot Web with native messaging capabilities
 
 #### Features
 
