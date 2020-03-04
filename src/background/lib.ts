@@ -188,6 +188,8 @@ export class Background {
     });
     this.riotTabs.add(details.tabId);
 
+    // TODO: just let the original bundle load, since we injected the necessary
+    // stuff already anyway
     return {
       redirectUrl: this.bundleResourceURL,
     };
