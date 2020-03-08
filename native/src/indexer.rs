@@ -186,15 +186,12 @@ impl Indexer {
 
         let mut events: Vec<(Event, Profile)> = Vec::new();
         let events_json = message["events"].as_array();
-        match events_json {
-            Some(events_json) => {
-                for event in events_json {
-                    let event = parse_event(get!(event, "event"), get!(event, "profile"))?;
-                    events.push(event);
-                }
+        if let Some(events_json) = events_json {
+            for event in events_json {
+                let event = parse_event(get!(event, "event"), get!(event, "profile"))?;
+                events.push(event);
             }
-            None => (),
-        };
+        }
 
         self.database
             .add_historic_events(events, new_checkpoint, old_checkpoint)
@@ -394,7 +391,7 @@ fn parse_search_object(search_config: &Value) -> Result<(String, SearchConfig), 
     if let Some(keys) = search_config["keys"].as_array() {
         for key in keys {
             if let Some(key) = key.as_str() {
-                match key.as_ref() {
+                match key {
                     "content.body" => config.with_key(EventType::Message),
                     "content.topic" => config.with_key(EventType::Topic),
                     "content.name" => config.with_key(EventType::Name),
@@ -411,48 +408,49 @@ fn parse_search_object(search_config: &Value) -> Result<(String, SearchConfig), 
     Ok((term, config))
 }
 
-fn method_to_enum(method: &String) -> MessageMethod {
-    if method == "initEventIndex" {
-        return MessageMethod::InitEventIndex;
+fn method_to_enum(method: &str) -> MessageMethod {
+    match method {
+        _ if method == "initEventIndex" => {
+            MessageMethod::InitEventIndex
+        }
+        _ if method == "loadCheckpoints" => {
+            MessageMethod::LoadCheckpoints
+        }
+        _ if method == "isEventIndexEmpty" => {
+            MessageMethod::IsEventIndexEmpty
+        }
+        _ if method == "commitLiveEvents" => {
+            MessageMethod::CommitLiveEvents
+        }
+        _ if method == "addEventToIndex" => {
+            MessageMethod::AddEventToIndex
+        }
+        _ if method == "addCrawlerCheckpoint" => {
+            MessageMethod::AddCrawlerCheckpoint
+        }
+        _ if method == "removeCrawlerCheckpoint" => {
+            MessageMethod::RemoveCrawlerCheckpoint
+        }
+        _ if method == "addHistoricEvents" => {
+            MessageMethod::AddHistoricEvents
+        }
+        _ if method == "searchEventIndex" => {
+            MessageMethod::SearchEventIndex
+        }
+        _ if method == "loadFileEvents" => {
+            MessageMethod::LoadFileEvents
+        }
+        _ if method == "closeEventIndex" => {
+            MessageMethod::CloseEventIndex
+        }
+        _ if method == "deleteEventIndex" => {
+            MessageMethod::DeleteEventIndex
+        }
+        _ if method == "getStats" => {
+            MessageMethod::GetStats
+        }
+        _ => MessageMethod::Unknown,
     }
-    if method == "loadCheckpoints" {
-        return MessageMethod::LoadCheckpoints;
-    }
-    if method == "isEventIndexEmpty" {
-        return MessageMethod::IsEventIndexEmpty;
-    }
-    if method == "commitLiveEvents" {
-        return MessageMethod::CommitLiveEvents;
-    }
-    if method == "addEventToIndex" {
-        return MessageMethod::AddEventToIndex;
-    }
-    if method == "addCrawlerCheckpoint" {
-        return MessageMethod::AddCrawlerCheckpoint;
-    }
-    if method == "removeCrawlerCheckpoint" {
-        return MessageMethod::RemoveCrawlerCheckpoint;
-    }
-    if method == "addHistoricEvents" {
-        return MessageMethod::AddHistoricEvents;
-    }
-    if method == "searchEventIndex" {
-        return MessageMethod::SearchEventIndex;
-    }
-    if method == "loadFileEvents" {
-        return MessageMethod::LoadFileEvents;
-    }
-    if method == "closeEventIndex" {
-        return MessageMethod::CloseEventIndex;
-    }
-    if method == "deleteEventIndex" {
-        return MessageMethod::DeleteEventIndex;
-    }
-    if method == "getStats" {
-        return MessageMethod::GetStats;
-    }
-
-    return MessageMethod::Unknown;
 }
 
 #[cfg(test)]
@@ -469,13 +467,13 @@ mod tests {
                 "body": "Test message",
                 "msgtype": "m.text"
             },
-            "origin_server_ts": 1580728702628 as usize,
+            "origin_server_ts": 1_580_728_702_628 as usize,
             "unsigned": {
-                "age": 949499816 as usize
+                "age": 949_499_816 as usize
             },
             "event_id": "$lp49H7iDTNWQxD-fiZ6sDE6vT70DlYdKdoujEB5QtLM",
             "user_id": "@example2:localhost",
-            "age": 949499816 as usize
+            "age": 949_499_816 as usize
         })
     }
 
@@ -514,7 +512,7 @@ mod tests {
             .expect("add_crawler_checkpoint");
         indexer
             .remove_crawler_checkpoint(&json!({
-                "checkpoint": checkpoint.clone()
+                "checkpoint": checkpoint
             }))
             .expect("remove_crawler_checkpoint");
 
@@ -545,7 +543,7 @@ mod tests {
                         "profile": profile
                     }
                 ],
-                "oldCheckpoint": checkpoint.clone()
+                "oldCheckpoint": checkpoint
             }))
             .expect("add_history_events");
 

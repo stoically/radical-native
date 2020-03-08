@@ -45,7 +45,7 @@ fn stdout(message: Value) -> Result<(), Error> {
     let message = serde_json::to_string(&message)?;
     let mut size = Vec::default();
     size.write_u32::<NativeEndian>(message.len() as u32)?;
-    io::stdout().write(&size)?;
-    io::stdout().write(&message.into_bytes())?;
+    io::stdout().write_all(&size)?;
+    io::stdout().write_all(&message.into_bytes())?;
     Ok(io::stdout().flush()?)
 }

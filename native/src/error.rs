@@ -4,12 +4,12 @@ pub(crate) enum Error {
     ParseCheckpointDirection { error: String },
     ParseLoadDirection { error: String },
     ParseSearchObject { error: String },
-    SeshatError { error: String },
-    SerdeError { error: String },
-    MpscRecError { error: String },
+    Seshat { error: String },
+    Serde { error: String },
+    MpscRec { error: String },
     MissingField { error: String },
     UnknownMethod { error: String },
-    IoError { error: String },
+    Io { error: String },
     IndexNotInitialized,
     CloseIndexBeforeDelete,
     UserDataDirNotFound,
@@ -17,7 +17,7 @@ pub(crate) enum Error {
 
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Error {
-        Error::IoError {
+        Error::Io {
             error: format!("{}", error),
         }
     }
@@ -25,7 +25,7 @@ impl From<std::io::Error> for Error {
 
 impl From<seshat::Error> for Error {
     fn from(error: seshat::Error) -> Error {
-        Error::SeshatError {
+        Error::Seshat {
             error: format!("{}", error),
         }
     }
@@ -33,7 +33,7 @@ impl From<seshat::Error> for Error {
 
 impl From<serde_json::Error> for Error {
     fn from(error: serde_json::Error) -> Error {
-        Error::SerdeError {
+        Error::Serde {
             error: format!("{}", error),
         }
     }
@@ -41,7 +41,7 @@ impl From<serde_json::Error> for Error {
 
 impl From<std::sync::mpsc::RecvError> for Error {
     fn from(error: std::sync::mpsc::RecvError) -> Error {
-        Error::MpscRecError {
+        Error::MpscRec {
             error: format!("{}", error),
         }
     }
