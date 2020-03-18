@@ -59,7 +59,7 @@ The Radical Native Firefox Add-on facilitates the communication between Riot Web
 - Open any Riot website in your browser
 - Click the Radical Native icon in the toolbar (RAM icon)
 - Riot website should reload and icon should have an "on" badge
-- Check Riot's "Settings > Security & Privacy > Message search > Manage", it should show [ongoing work](https://github.com/vector-im/riot-web/issues/12334)
+- Check Riot's "Settings > Security & Privacy > Message search > Manage", it should show ongoing work
 
 ### Radical Add-on
 
