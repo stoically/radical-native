@@ -11,7 +11,6 @@ pub(crate) enum Error {
     UnknownMethod { error: String },
     Io { error: String },
     IndexNotInitialized,
-    CloseIndexBeforeDelete,
     UserDataDirNotFound,
 }
 

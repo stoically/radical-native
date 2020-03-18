@@ -68,7 +68,10 @@ pub(crate) fn handle_message(radical: &mut Radical, message: Value) -> Result<Va
                 radical.indexer.remove(event_store);
                 json!(null)
             }
-            MessageMethod::DeleteEventIndex => return Err(Error::CloseIndexBeforeDelete),
+            MessageMethod::DeleteEventIndex => {
+                radical.indexer.remove(event_store);
+                Indexer::delete_event_index(event_store)?
+            },
             MessageMethod::InitEventIndex => json!(null), // no-op
             MessageMethod::Unknown => {
                 return Err(Error::UnknownMethod {
