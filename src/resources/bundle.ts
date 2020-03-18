@@ -119,6 +119,10 @@ class SeshatIndexManager {
   async deleteEventIndex() {
     return this.postMessage({ method: "deleteEventIndex" });
   }
+
+  async deleteEvent(eventId: any) {
+    return this.postMessage({ method: "deleteEvent", content: { eventId } });
+  }
 }
 
 const indexManager = new SeshatIndexManager();

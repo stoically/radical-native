@@ -22,6 +22,7 @@ enum MessageMethod {
     LoadFileEvents,
     CloseEventIndex,
     DeleteEventIndex,
+    DeleteEvent,
     GetStats,
     Unknown,
 }
@@ -63,6 +64,7 @@ pub(crate) fn handle_message(radical: &mut Radical, message: Value) -> Result<Va
                 indexer.search_event_index(get!(message, "content"))?
             }
             MessageMethod::LoadFileEvents => indexer.load_file_events(get!(message, "content"))?,
+            MessageMethod::DeleteEvent => indexer.delete_event(get!(message, "content"))?,
             MessageMethod::GetStats => indexer.get_stats()?,
             MessageMethod::CloseEventIndex => {
                 radical.indexer.remove(event_store);
@@ -71,7 +73,7 @@ pub(crate) fn handle_message(radical: &mut Radical, message: Value) -> Result<Va
             MessageMethod::DeleteEventIndex => {
                 radical.indexer.remove(event_store);
                 Indexer::delete_event_index(event_store)?
-            },
+            }
             MessageMethod::InitEventIndex => json!(null), // no-op
             MessageMethod::Unknown => {
                 return Err(Error::UnknownMethod {
@@ -276,6 +278,13 @@ impl Indexer {
             "size": ret.size
         }))
     }
+
+    fn delete_event(&mut self, message: &Value) -> Result<Value, Error> {
+        let event_id = as_str!(message, "eventId");
+        self.database.delete_event(&event_id).recv()??;
+
+        Ok(json!(null))
+    }
 }
 
 fn parse_event(event_json: &Value, profile_json: &Value) -> Result<(Event, Profile), Error> {
@@ -413,45 +422,20 @@ fn parse_search_object(search_config: &Value) -> Result<(String, SearchConfig), 
 
 fn method_to_enum(method: &str) -> MessageMethod {
     match method {
-        _ if method == "initEventIndex" => {
-            MessageMethod::InitEventIndex
-        }
-        _ if method == "loadCheckpoints" => {
-            MessageMethod::LoadCheckpoints
-        }
-        _ if method == "isEventIndexEmpty" => {
-            MessageMethod::IsEventIndexEmpty
-        }
-        _ if method == "commitLiveEvents" => {
-            MessageMethod::CommitLiveEvents
-        }
-        _ if method == "addEventToIndex" => {
-            MessageMethod::AddEventToIndex
-        }
-        _ if method == "addCrawlerCheckpoint" => {
-            MessageMethod::AddCrawlerCheckpoint
-        }
-        _ if method == "removeCrawlerCheckpoint" => {
-            MessageMethod::RemoveCrawlerCheckpoint
-        }
-        _ if method == "addHistoricEvents" => {
-            MessageMethod::AddHistoricEvents
-        }
-        _ if method == "searchEventIndex" => {
-            MessageMethod::SearchEventIndex
-        }
-        _ if method == "loadFileEvents" => {
-            MessageMethod::LoadFileEvents
-        }
-        _ if method == "closeEventIndex" => {
-            MessageMethod::CloseEventIndex
-        }
-        _ if method == "deleteEventIndex" => {
-            MessageMethod::DeleteEventIndex
-        }
-        _ if method == "getStats" => {
-            MessageMethod::GetStats
-        }
+        _ if method == "initEventIndex" => MessageMethod::InitEventIndex,
+        _ if method == "loadCheckpoints" => MessageMethod::LoadCheckpoints,
+        _ if method == "isEventIndexEmpty" => MessageMethod::IsEventIndexEmpty,
+        _ if method == "commitLiveEvents" => MessageMethod::CommitLiveEvents,
+        _ if method == "addEventToIndex" => MessageMethod::AddEventToIndex,
+        _ if method == "addCrawlerCheckpoint" => MessageMethod::AddCrawlerCheckpoint,
+        _ if method == "removeCrawlerCheckpoint" => MessageMethod::RemoveCrawlerCheckpoint,
+        _ if method == "addHistoricEvents" => MessageMethod::AddHistoricEvents,
+        _ if method == "searchEventIndex" => MessageMethod::SearchEventIndex,
+        _ if method == "loadFileEvents" => MessageMethod::LoadFileEvents,
+        _ if method == "closeEventIndex" => MessageMethod::CloseEventIndex,
+        _ if method == "deleteEventIndex" => MessageMethod::DeleteEventIndex,
+        _ if method == "deleteEvent" => MessageMethod::DeleteEvent,
+        _ if method == "getStats" => MessageMethod::GetStats,
         _ => MessageMethod::Unknown,
     }
 }
@@ -514,9 +498,7 @@ mod tests {
             }))
             .expect("add_crawler_checkpoint");
         indexer
-            .remove_crawler_checkpoint(&json!({
-                "checkpoint": checkpoint
-            }))
+            .remove_crawler_checkpoint(&json!({ "checkpoint": checkpoint }))
             .expect("remove_crawler_checkpoint");
 
         let checkpoints = indexer.load_checkpoints().expect("load_checkpoints");
