@@ -73,6 +73,7 @@ The Radical Native Firefox Add-on facilitates the communication between Riot Web
 
 ## Development
 
+- `cargo install cargo-watch`
 - Ubuntu/Debian: `apt install libsqlcipher0 libsqlcipher-dev`
 - MacOS: `brew install libsqlcipher`
 
