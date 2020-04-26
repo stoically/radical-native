@@ -212,7 +212,7 @@ impl Indexer {
         let search_config = get!(message, "searchConfig");
         let (term, config) = parse_search_object(&search_config)?;
         let searcher = self.database.get_searcher();
-        let search_results = searcher.search(&term, &config)?;
+        let (_, search_results) = searcher.search(&term, &config)?;
         let mut json_results = Vec::new();
         for result in search_results {
             let result: SearchResult = result;
