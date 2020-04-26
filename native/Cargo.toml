@@ -13,6 +13,3 @@ seshat = { git = "https://github.com/stoically/seshat", branch = "thiserror" }
 
 [dev-dependencies]
 tempfile = "3.1.0"
-
-[package.metadata.deb]
-depends = ["libsqlcipher0"]

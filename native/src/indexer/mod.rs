@@ -1,80 +1,57 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use serde_json::{json, Value};
 use seshat::{
     CheckpointDirection, Config, Connection, CrawlerCheckpoint, Database, Event, EventType,
     Language, LoadConfig, LoadDirection, Profile, SearchConfig, SearchResult,
 };
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
+
+mod message;
 
 use crate::Radical;
+use message::{Message, Method};
 
-enum MessageMethod {
-    InitEventIndex,
-    LoadCheckpoints,
-    IsEventIndexEmpty,
-    CommitLiveEvents,
-    AddEventToIndex,
-    AddCrawlerCheckpoint,
-    RemoveCrawlerCheckpoint,
-    AddHistoricEvents,
-    SearchEventIndex,
-    LoadFileEvents,
-    CloseEventIndex,
-    DeleteEventIndex,
-    DeleteEvent,
-    GetStats,
-    Unknown,
-}
-
-pub(crate) fn handle_message(radical: &mut Radical, message: Value) -> Result<Value> {
-    let method_str = as_str!(message, "method");
-    let method = method_to_enum(&method_str);
-    let event_store = message["eventStore"].as_str().unwrap_or("default");
-    let indexer = radical.indexer.get_mut(event_store);
+pub(crate) fn handle_message(radical: &mut Radical, message_in: Value) -> Result<Value> {
+    let message: Message = serde_json::from_value(message_in)?;
+    let indexer = radical.indexer.get_mut(&message.event_store);
 
     let res = match indexer {
-        None => match method {
-            MessageMethod::InitEventIndex => {
-                let config = Indexer::message_to_config(&message);
-                let indexer = Indexer::new(event_store, config)?;
-                radical.indexer.insert(event_store.to_owned(), indexer);
+        None => match message.method {
+            Method::InitEventIndex => {
+                let config = Indexer::message_to_config(message.raw)?;
+                let indexer = Indexer::new(&message.event_store, config)?;
+                radical
+                    .indexer
+                    .insert(message.event_store.to_owned(), indexer);
                 json!(null)
             }
-            MessageMethod::DeleteEventIndex => Indexer::delete_event_index(event_store)?,
+            Method::DeleteEventIndex => Indexer::delete_event_index(&message.event_store)?,
             _ => bail!("index not initialized"),
         },
-        Some(indexer) => match method {
-            MessageMethod::LoadCheckpoints => indexer.load_checkpoints()?,
-            MessageMethod::IsEventIndexEmpty => indexer.is_event_index_empty()?,
-            MessageMethod::CommitLiveEvents => indexer.commit_live_events()?,
-            MessageMethod::AddEventToIndex => {
-                indexer.add_event_to_index(get!(message, "content"))?
+        Some(indexer) => match message.method {
+            Method::LoadCheckpoints => indexer.load_checkpoints()?,
+            Method::IsEventIndexEmpty => indexer.is_event_index_empty()?,
+            Method::CommitLiveEvents => indexer.commit_live_events()?,
+            Method::AddEventToIndex => indexer.add_event_to_index(&message.content)?,
+            Method::AddCrawlerCheckpoint => indexer.add_history_events(&message.content)?,
+            Method::AddHistoricEvents => indexer.add_history_events(&message.content)?,
+            Method::RemoveCrawlerCheckpoint => {
+                indexer.remove_crawler_checkpoint(&message.content)?
             }
-            MessageMethod::AddCrawlerCheckpoint => {
-                indexer.add_history_events(get!(message, "content"))?
-            }
-            MessageMethod::AddHistoricEvents => {
-                indexer.add_history_events(get!(message, "content"))?
-            }
-            MessageMethod::RemoveCrawlerCheckpoint => {
-                indexer.remove_crawler_checkpoint(get!(message, "content"))?
-            }
-            MessageMethod::SearchEventIndex => {
-                indexer.search_event_index(get!(message, "content"))?
-            }
-            MessageMethod::LoadFileEvents => indexer.load_file_events(get!(message, "content"))?,
-            MessageMethod::DeleteEvent => indexer.delete_event(get!(message, "content"))?,
-            MessageMethod::GetStats => indexer.get_stats()?,
-            MessageMethod::CloseEventIndex => {
-                radical.indexer.remove(event_store);
+            Method::SearchEventIndex => indexer.search_event_index(&message.content)?,
+            Method::LoadFileEvents => indexer.load_file_events(&message.content)?,
+            Method::DeleteEvent => indexer.delete_event(&message.content)?,
+            Method::GetStats => indexer.get_stats()?,
+            Method::CloseEventIndex => {
+                radical.indexer.remove(&message.event_store);
                 json!(null)
             }
-            MessageMethod::DeleteEventIndex => {
-                radical.indexer.remove(event_store);
-                Indexer::delete_event_index(event_store)?
+            Method::DeleteEventIndex => {
+                radical.indexer.remove(&message.event_store);
+                Indexer::delete_event_index(&message.event_store)?
             }
-            MessageMethod::InitEventIndex => json!(null), // no-op
-            MessageMethod::Unknown => bail!("unknown method: {}", method_str),
+            Method::InitEventIndex => json!(null), // no-op
+            Method::Unknown => bail!("unknown method"),
         },
     };
 
@@ -103,19 +80,21 @@ impl Indexer {
         })
     }
 
-    fn message_to_config(message: &Value) -> Config {
+    fn message_to_config(message: HashMap<String, Value>) -> Result<Config> {
         let mut config = Config::new();
-        config = config.set_passphrase(
-            message["passphrase"]
-                .as_str()
-                .unwrap_or("DEFAULT_PASSPHRASE"),
-        );
-        if let Some(language) = message["language"].as_str() {
-            let language = Language::from(language);
+
+        let passphrase = match message.get("passphrase") {
+            Some(passphrase) => passphrase.as_str().context("invalid config passphrase")?,
+            None => "DEFAULT_PASSPHRASE",
+        };
+        config = config.set_passphrase(passphrase);
+
+        if let Some(language) = message.get("language") {
+            let language = Language::from(language.as_str().context("invalid config language")?);
             config = config.set_language(&language);
         }
 
-        config
+        Ok(config)
     }
 
     fn event_store_path(event_store: &str) -> Result<PathBuf> {
@@ -397,26 +376,6 @@ fn parse_search_object(search_config: &Value) -> Result<(String, SearchConfig)> 
     }
 
     Ok((term, config))
-}
-
-fn method_to_enum(method: &str) -> MessageMethod {
-    match method {
-        _ if method == "initEventIndex" => MessageMethod::InitEventIndex,
-        _ if method == "loadCheckpoints" => MessageMethod::LoadCheckpoints,
-        _ if method == "isEventIndexEmpty" => MessageMethod::IsEventIndexEmpty,
-        _ if method == "commitLiveEvents" => MessageMethod::CommitLiveEvents,
-        _ if method == "addEventToIndex" => MessageMethod::AddEventToIndex,
-        _ if method == "addCrawlerCheckpoint" => MessageMethod::AddCrawlerCheckpoint,
-        _ if method == "removeCrawlerCheckpoint" => MessageMethod::RemoveCrawlerCheckpoint,
-        _ if method == "addHistoricEvents" => MessageMethod::AddHistoricEvents,
-        _ if method == "searchEventIndex" => MessageMethod::SearchEventIndex,
-        _ if method == "loadFileEvents" => MessageMethod::LoadFileEvents,
-        _ if method == "closeEventIndex" => MessageMethod::CloseEventIndex,
-        _ if method == "deleteEventIndex" => MessageMethod::DeleteEventIndex,
-        _ if method == "deleteEvent" => MessageMethod::DeleteEvent,
-        _ if method == "getStats" => MessageMethod::GetStats,
-        _ => MessageMethod::Unknown,
-    }
 }
 
 #[cfg(test)]
