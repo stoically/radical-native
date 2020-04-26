@@ -3,8 +3,20 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 use serde_json::Value;
-use std::collections::HashMap;
-use std::fmt;
+use std::{collections::HashMap, fmt};
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Message {
+    #[serde(deserialize_with = "method_to_enum")]
+    pub method: Method,
+    #[serde(default = "event_store_default")]
+    pub event_store: String,
+    #[serde(default)]
+    pub content: Value,
+    #[serde(flatten)]
+    pub raw: HashMap<String, Value>,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Method {
@@ -23,19 +35,6 @@ pub enum Method {
     DeleteEvent,
     GetStats,
     Unknown,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Message {
-    #[serde(deserialize_with = "method_to_enum")]
-    pub method: Method,
-    #[serde(default = "event_store_default")]
-    pub event_store: String,
-    #[serde(default)]
-    pub content: Value,
-    #[serde(flatten)]
-    pub raw: HashMap<String, Value>,
 }
 
 struct MethodVisitor;
