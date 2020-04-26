@@ -3,11 +3,9 @@ mod macros;
 
 use std::collections::HashMap;
 
-use error::Error;
 use indexer::Indexer;
 use native_messaging::{stdin, stdout_error, stdout_ready, stdout_reply};
 
-mod error;
 mod indexer;
 mod native_messaging;
 

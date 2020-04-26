@@ -1,10 +1,9 @@
+use anyhow::{bail, Error, Result};
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use serde_json::{json, Value};
 use std::io::{self, prelude::*, Cursor};
 
-use crate::Error;
-
-pub(crate) fn stdin() -> Result<(i64, Value), Error> {
+pub(crate) fn stdin() -> Result<(i64, Value)> {
     let mut buffer = [0; 4];
     io::stdin().read_exact(&mut buffer)?;
     let mut buf = Cursor::new(&buffer);
@@ -41,7 +40,7 @@ pub(crate) fn stdout_error(rpc_id: i64, error: Error) {
     .unwrap_or_else(|error| eprintln!("{:?}", error));
 }
 
-fn stdout(message: Value) -> Result<(), Error> {
+fn stdout(message: Value) -> Result<()> {
     let message = serde_json::to_string(&message)?;
     let mut size = Vec::default();
     size.write_u32::<NativeEndian>(message.len() as u32)?;

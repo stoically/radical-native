@@ -1,12 +1,11 @@
-use std::path::PathBuf;
-
+use anyhow::{bail, Result};
 use serde_json::{json, Value};
 use seshat::{
     CheckpointDirection, Config, Connection, CrawlerCheckpoint, Database, Event, EventType,
     Language, LoadConfig, LoadDirection, Profile, SearchConfig, SearchResult,
 };
+use std::path::PathBuf;
 
-use crate::Error;
 use crate::Radical;
 
 enum MessageMethod {
@@ -27,7 +26,7 @@ enum MessageMethod {
     Unknown,
 }
 
-pub(crate) fn handle_message(radical: &mut Radical, message: Value) -> Result<Value, Error> {
+pub(crate) fn handle_message(radical: &mut Radical, message: Value) -> Result<Value> {
     let method_str = as_str!(message, "method");
     let method = method_to_enum(&method_str);
     let event_store = message["eventStore"].as_str().unwrap_or("default");
@@ -42,7 +41,7 @@ pub(crate) fn handle_message(radical: &mut Radical, message: Value) -> Result<Va
                 json!(null)
             }
             MessageMethod::DeleteEventIndex => Indexer::delete_event_index(event_store)?,
-            _ => return Err(Error::IndexNotInitialized),
+            _ => bail!("index not initialized"),
         },
         Some(indexer) => match method {
             MessageMethod::LoadCheckpoints => indexer.load_checkpoints()?,
@@ -75,11 +74,7 @@ pub(crate) fn handle_message(radical: &mut Radical, message: Value) -> Result<Va
                 Indexer::delete_event_index(event_store)?
             }
             MessageMethod::InitEventIndex => json!(null), // no-op
-            MessageMethod::Unknown => {
-                return Err(Error::UnknownMethod {
-                    error: format!("Unknown method: {}", method_str),
-                })
-            }
+            MessageMethod::Unknown => bail!("unknown method: {}", method_str),
         },
     };
 
@@ -92,14 +87,14 @@ pub(crate) struct Indexer {
 }
 
 impl Indexer {
-    pub fn new(event_store: &str, config: Config) -> Result<Indexer, Error> {
+    pub fn new(event_store: &str, config: Config) -> Result<Indexer> {
         let path = Indexer::event_store_path(event_store)?;
         std::fs::create_dir_all(&path)?;
 
         Ok(Indexer::new_in_path(path, config)?)
     }
 
-    pub fn new_in_path(path: PathBuf, config: Config) -> Result<Indexer, Error> {
+    pub fn new_in_path(path: PathBuf, config: Config) -> Result<Indexer> {
         let database = Database::new_with_config(path, &config)?;
         let connection = database.get_connection()?;
         Ok(Indexer {
@@ -123,10 +118,10 @@ impl Indexer {
         config
     }
 
-    fn event_store_path(event_store: &str) -> Result<PathBuf, Error> {
+    fn event_store_path(event_store: &str) -> Result<PathBuf> {
         let mut path = match dirs::data_dir() {
             Some(path) => path,
-            None => return Err(Error::UserDataDirNotFound),
+            None => bail!("userdata dir not found"),
         };
         path.push("radical-native");
         path.push("EventStore");
@@ -134,7 +129,7 @@ impl Indexer {
         Ok(path)
     }
 
-    fn delete_event_index(event_store: &str) -> Result<Value, Error> {
+    fn delete_event_index(event_store: &str) -> Result<Value> {
         let path = Indexer::event_store_path(event_store)?;
         if path.exists() {
             std::fs::remove_dir_all(path)?;
@@ -143,7 +138,7 @@ impl Indexer {
         Ok(json!(null))
     }
 
-    fn load_checkpoints(&mut self) -> Result<Value, Error> {
+    fn load_checkpoints(&mut self) -> Result<Value> {
         let checkpoints = self.connection.load_checkpoints()?;
         let mut checkpoints_json = Vec::new();
         for checkpoint in checkpoints {
@@ -161,17 +156,17 @@ impl Indexer {
         Ok(serde_json::to_value(&checkpoints_json)?)
     }
 
-    fn is_event_index_empty(&mut self) -> Result<Value, Error> {
+    fn is_event_index_empty(&mut self) -> Result<Value> {
         let empty = self.connection.is_empty()?;
         Ok(serde_json::to_value(empty)?)
     }
 
-    fn commit_live_events(&mut self) -> Result<Value, Error> {
+    fn commit_live_events(&mut self) -> Result<Value> {
         self.database.commit_no_wait().recv()??;
         Ok(json!(true))
     }
 
-    fn add_event_to_index(&mut self, message: &Value) -> Result<Value, Error> {
+    fn add_event_to_index(&mut self, message: &Value) -> Result<Value> {
         let event_json = get!(message, "ev");
         let profile_json = get!(message, "profile");
         let (event, profile) = parse_event(&event_json, &profile_json)?;
@@ -179,7 +174,7 @@ impl Indexer {
         Ok(json!(null))
     }
 
-    fn add_history_events(&mut self, message: &Value) -> Result<Value, Error> {
+    fn add_history_events(&mut self, message: &Value) -> Result<Value> {
         let new_checkpoint: Option<CrawlerCheckpoint> = match message.get("checkpoint") {
             Some(checkpoint) => Some(parse_checkpoint(checkpoint)?),
             None => None,
@@ -204,11 +199,11 @@ impl Indexer {
         Ok(json!(null))
     }
 
-    fn remove_crawler_checkpoint(&mut self, message: &Value) -> Result<Value, Error> {
+    fn remove_crawler_checkpoint(&mut self, message: &Value) -> Result<Value> {
         Ok(self.add_history_events(&json!({ "oldCheckpoint": get!(message, "checkpoint") }))?)
     }
 
-    fn search_event_index(&mut self, message: &Value) -> Result<Value, Error> {
+    fn search_event_index(&mut self, message: &Value) -> Result<Value> {
         let search_config = get!(message, "searchConfig");
         let (term, config) = parse_search_object(&search_config)?;
         let searcher = self.database.get_searcher();
@@ -245,7 +240,7 @@ impl Indexer {
         }))
     }
 
-    fn load_file_events(&mut self, message: &Value) -> Result<Value, Error> {
+    fn load_file_events(&mut self, message: &Value) -> Result<Value> {
         let args = get!(message, "args");
         let room_id = as_str!(args, "roomId");
         let mut config = LoadConfig::new(room_id);
@@ -270,7 +265,7 @@ impl Indexer {
         Ok(json!(results))
     }
 
-    fn get_stats(&mut self) -> Result<Value, Error> {
+    fn get_stats(&mut self) -> Result<Value> {
         let ret = self.connection.get_stats()?;
         Ok(json!({
             "eventCount": ret.event_count,
@@ -279,7 +274,7 @@ impl Indexer {
         }))
     }
 
-    fn delete_event(&mut self, message: &Value) -> Result<Value, Error> {
+    fn delete_event(&mut self, message: &Value) -> Result<Value> {
         let event_id = as_str!(message, "eventId");
         self.database.delete_event(&event_id).recv()??;
 
@@ -287,7 +282,7 @@ impl Indexer {
     }
 }
 
-fn parse_event(event_json: &Value, profile_json: &Value) -> Result<(Event, Profile), Error> {
+fn parse_event(event_json: &Value, profile_json: &Value) -> Result<(Event, Profile)> {
     let event_content = get!(event_json, "content");
     let event_type = as_str!(event_json, "type");
     let (event_type, content_value, msgtype) = match event_type.as_ref() {
@@ -298,11 +293,7 @@ fn parse_event(event_json: &Value, profile_json: &Value) -> Result<(Event, Profi
         ),
         "m.room.name" => (EventType::Name, as_str!(event_content, "name"), None),
         "m.room.topic" => (EventType::Topic, as_str!(event_content, "topic"), None),
-        _ => {
-            return Err(Error::ParseEvent {
-                error: format!("Unknown event type: {}", event_type),
-            });
-        }
+        _ => bail!("Unknown event type while parsing event: {}", event_type),
     };
 
     let event_id = as_str!(event_json, "event_id");
@@ -326,37 +317,29 @@ fn parse_event(event_json: &Value, profile_json: &Value) -> Result<(Event, Profi
     Ok((event, profile))
 }
 
-fn parse_checkpoint_direction(direction: &str) -> Result<CheckpointDirection, Error> {
+fn parse_checkpoint_direction(direction: &str) -> Result<CheckpointDirection> {
     let direction = match direction.to_lowercase().as_ref() {
         "backwards" | "backward" | "b" => CheckpointDirection::Backwards,
         "forwards" | "forward" | "f" => CheckpointDirection::Forwards,
         "" => CheckpointDirection::Backwards,
-        d => {
-            return Err(Error::ParseCheckpointDirection {
-                error: format!("Unknown checkpoint direction {}", d),
-            });
-        }
+        d => bail!("Unknown checkpoint direction {}", d),
     };
 
     Ok(direction)
 }
 
-fn parse_load_direction(direction: &str) -> Result<LoadDirection, Error> {
+fn parse_load_direction(direction: &str) -> Result<LoadDirection> {
     let direction = match direction.to_lowercase().as_ref() {
         "backwards" | "backward" | "b" => LoadDirection::Backwards,
         "forwards" | "forward" | "f" => LoadDirection::Forwards,
         "" => LoadDirection::Backwards,
-        d => {
-            return Err(Error::ParseLoadDirection {
-                error: format!("Unknown checkpoint direction {}", d),
-            });
-        }
+        d => bail!("Unknown checkpoint direction {}", d),
     };
 
     Ok(direction)
 }
 
-fn parse_checkpoint(checkpoint_json: &Value) -> Result<CrawlerCheckpoint, Error> {
+fn parse_checkpoint(checkpoint_json: &Value) -> Result<CrawlerCheckpoint> {
     let room_id = as_str!(checkpoint_json, "roomId");
     let token = as_str!(checkpoint_json, "token");
     let full_crawl = checkpoint_json["fullCrawl"].as_bool().unwrap_or(false);
@@ -375,7 +358,7 @@ fn parse_checkpoint(checkpoint_json: &Value) -> Result<CrawlerCheckpoint, Error>
     })
 }
 
-fn parse_search_object(search_config: &Value) -> Result<(String, SearchConfig), Error> {
+fn parse_search_object(search_config: &Value) -> Result<(String, SearchConfig)> {
     let term = as_str!(search_config, "search_term");
 
     let mut config = SearchConfig::new();
@@ -407,11 +390,7 @@ fn parse_search_object(search_config: &Value) -> Result<(String, SearchConfig), 
                     "content.body" => config.with_key(EventType::Message),
                     "content.topic" => config.with_key(EventType::Topic),
                     "content.name" => config.with_key(EventType::Name),
-                    _ => {
-                        return Err(Error::ParseSearchObject {
-                            error: format!("Invalid search key {}", key),
-                        });
-                    }
+                    _ => bail!("Invalid search key while parsing search object {}", key),
                 };
             }
         }
