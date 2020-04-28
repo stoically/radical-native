@@ -1,7 +1,10 @@
 [package]
 name = "radical-native"
+description = "Extending Riot Web with native capabilities"
+authors = ["stoically <stoically@protonmail.com>"]
 version = "0.1.0"
 edition = "2018"
+license = "MIT"
 
 [dependencies]
 anyhow = "1.0.28"
@@ -13,3 +16,10 @@ seshat = { git = "https://github.com/matrix-org/seshat", rev = "b20acfb8d6ed96e1
 
 [dev-dependencies]
 tempfile = "3.1.0"
+
+[package.metadata.deb]
+depends = "libsqlcipher0"
+assets = [
+    ["target/release/radical-native", "/usr/bin/", "755"],
+    ["assets/firefox/radical.native.json", "/usr/lib/mozilla/native-messaging-hosts/", "644"]
+]

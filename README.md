@@ -24,31 +24,20 @@ Extending [Riot Web](https://github.com/vector-im/riot-web) with native capabili
 
 #### Supported Riots
 
-- [x] [Radical](https://github.com/stoically/radical): Riot Web bundled as Firefox Add-on
 - [x] Riot Web over HTTP
+- [x] [Radical](https://github.com/stoically/radical): Riot Web bundled as Firefox Add-on
 
 ## Install
 
-### 1. SQLCipher
+### 1. Radical Native Binary
 
-- Ubuntu/Debian: `apt install libsqlcipher0`
-- MacOS: `brew install sqlcipher`
+- Ubuntu/Debian: [Install the binary from the latest released `.deb` file](https://github.com/stoically/radical-native/releases)
 
-SQLCipher is needed for [seshat](https://github.com/matrix-org/seshat).
+Hint: The event store is saved into the `radical-native` directory inside your [user data directory](https://github.com/soc/dirs-rs#features).
 
-### 2. Radical Native Binary
+### 2. Radical Native Add-on
 
-```
-curl -LsSf https://git.io/JvlNt | bash
-```
-
-This one-liner is a [simple shell script](https://github.com/stoically/radical-native/blob/master/native/scripts/install.sh) that downloads the [radical native binary from the releases](https://github.com/stoically/radical-native/releases), stores it, and generates a [native manifest](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_manifests#Manifest_location) pointing to the binary for Firefox.
-
-Hint: The binary and event store are saved into the `radical-native` directory inside your [user data directory](https://github.com/soc/dirs-rs#features).
-
-### 3. Radical Native Add-on
-
-- [Install the latest Radical Native Firefox Add-on](https://github.com/stoically/radical-native/releases)
+- [Install the Firefox Add-on from the latest released `.xpi` file](https://github.com/stoically/radical-native/releases)
 
 The Radical Native Firefox Add-on facilitates the communication between Riot Web and the Radical Native Binary.
 
@@ -67,8 +56,8 @@ The Radical Native Firefox Add-on facilitates the communication between Riot Web
 
 ## Troubleshooting
 
-- Check the console output from install step 2 and try to execute the radical native binary directly (the path mentioned after "Installed to:") - it should respond with "ready: true"
-- Check the Radical Native console for error logs: `about:debugging#/runtime/this-firefox` > Radical Native Inspect
+- Try to execute the `radical-native` binary directly - it should respond with "ready: true"
+- Check the Radical Native Add-on console for error logs: `about:debugging#/runtime/this-firefox` > Radical Native Inspect
 - If indexing gets stuck you can safely disable and enable it in the "Manage" dialog
 
 ## Development
