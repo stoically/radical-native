@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use seshat::{
@@ -132,6 +132,11 @@ pub struct EventName {
     #[serde(rename = "origin_server_ts")]
     pub server_ts: i64,
     pub room_id: String,
+    pub content: EventNameContent,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventNameContent {
     pub name: String,
 }
 
@@ -142,14 +147,20 @@ pub struct EventTopic {
     #[serde(rename = "origin_server_ts")]
     pub server_ts: i64,
     pub room_id: String,
+    pub content: EventTopicContent,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventTopicContent {
     pub topic: String,
 }
 
 pub(crate) fn handle_message(radical: &mut Radical, message_in: Value) -> Result<Value> {
     let event_store = match message_in.get("eventStore") {
-        Some(res) => res.to_string(),
-        None => "default".to_owned(),
-    };
+        Some(res) => res.as_str().context("eventStore.as_str() failed")?,
+        None => "default",
+    }
+    .to_owned();
     let message: Message = serde_json::from_value(message_in)?;
 
     let res = match radical.indexer.get_mut(&event_store) {
@@ -362,7 +373,7 @@ fn convert_event(event: Value) -> Result<seshat::Event> {
         },
         Event::Name(ev) => seshat::Event {
             event_type: EventType::Name,
-            content_value: ev.name,
+            content_value: ev.content.name,
             msgtype: None,
             event_id: ev.event_id,
             sender: ev.sender,
@@ -372,7 +383,7 @@ fn convert_event(event: Value) -> Result<seshat::Event> {
         },
         Event::Topic(ev) => seshat::Event {
             event_type: EventType::Message,
-            content_value: ev.topic,
+            content_value: ev.content.topic,
             msgtype: None,
             event_id: ev.event_id,
             sender: ev.sender,

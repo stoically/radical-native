@@ -1473,7 +1473,7 @@ dependencies = [
 [[package]]
 name = "seshat"
 version = "1.3.3"
-source = "git+https://github.com/stoically/seshat#05c940b9c8432a632b7f92d271e42905126dc0e2"
+source = "git+https://github.com/stoically/seshat#3c30218a4b2cdc92b0c6b014c6719649d879ff1a"
 dependencies = [
  "aes-ctr",
  "byteorder",
