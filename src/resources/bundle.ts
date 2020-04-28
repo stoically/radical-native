@@ -17,9 +17,6 @@ class SeshatIndexManager {
           );
           return;
         }
-        console.log("[RadicalNative::page] rpc reply received", message, {
-          originalMessage: rpcPromise.message,
-        });
         rpcPromise.resolve(message.reply);
         this.rpcPromises.delete(message.rpcId);
         break;
@@ -40,7 +37,6 @@ class SeshatIndexManager {
         resolve,
         reject,
       });
-      console.log("[RadicalNative::page] posting rpc message", rpcMessage);
       window.postMessage(rpcMessage, "*");
     });
   }
@@ -162,10 +158,8 @@ const handleToBundleMessage = (message: any) => {
 
 window.addEventListener("message", function(event) {
   if (event.source !== window || event?.data?.target !== "page") {
-    console.log("[RadicalNative::page] ignoring message", event);
     return;
   }
-  console.log("[RadicalNative::page] message received", event);
 
   switch (event.data.type) {
     case "bundle":

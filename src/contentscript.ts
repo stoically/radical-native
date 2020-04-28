@@ -32,10 +32,8 @@ const handleSeshatMessage = async (message: any): Promise<void> => {
 
 window.addEventListener("message", function(event) {
   if (event.source !== window || event?.data?.target !== "contentscript") {
-    console.log("[RadicalNative::contentscript] ignoring message", event);
     return;
   }
-  console.log("[RadicalNative::contentscript] window message", event);
 
   switch (event.data.type) {
     case "bundle":
@@ -50,8 +48,6 @@ window.addEventListener("message", function(event) {
 
 browser.runtime.onMessage.addListener(
   async (message: any): Promise<any> => {
-    console.log("[RadicalNative::contentscript] runtime.onMessage", message);
-
     if (message.method === "ready") {
       bundleURL = message.bundle;
       return "ready";
