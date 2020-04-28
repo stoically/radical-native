@@ -248,9 +248,9 @@ impl Indexer {
         Ok(json!(true))
     }
 
-    fn add_event_to_index(&mut self, content: AddEventToIndex) -> Result<Value> {
-        let event = convert_event(content.ev)?;
-        self.database.add_event(event, content.profile);
+    fn add_event_to_index(&mut self, message: AddEventToIndex) -> Result<Value> {
+        let event = convert_event(message.ev)?;
+        self.database.add_event(event, message.profile);
         Ok(json!(null))
     }
 
