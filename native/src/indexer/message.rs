@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use seshat::{CrawlerCheckpoint, LoadConfig, Profile, SearchConfig};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -28,7 +29,7 @@ pub struct InitEventIndex {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AddEventToIndex {
-    pub ev: Event,
+    pub ev: Value,
     pub profile: Profile,
 }
 
@@ -55,7 +56,7 @@ pub struct DeleteEvent {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Events {
-    pub event: Event,
+    pub event: Value,
     pub profile: Profile,
 }
 

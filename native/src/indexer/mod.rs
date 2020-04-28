@@ -129,7 +129,7 @@ impl Indexer {
     }
 
     fn add_event_to_index(&mut self, content: AddEventToIndex) -> Result<Value> {
-        let event = convert_event(content.ev);
+        let event = convert_event(content.ev)?;
         self.database.add_event(event, content.profile);
         Ok(json!(null))
     }
@@ -139,7 +139,7 @@ impl Indexer {
         if let Some(events_in) = message.events {
             for event_in in events_in {
                 let profile = event_in.profile;
-                let event = convert_event(event_in.event);
+                let event = convert_event(event_in.event)?;
                 events.push((event, profile));
             }
         }
@@ -231,8 +231,10 @@ fn config(message: InitEventIndex) -> Config {
     config
 }
 
-fn convert_event(event: message::Event) -> seshat::Event {
-    match event {
+fn convert_event(event: Value) -> Result<seshat::Event> {
+    let source = serde_json::to_string(&event)?;
+    let event: message::Event = serde_json::from_value(event)?;
+    let res = match event {
         message::Event::Message(ev) => Event {
             event_type: EventType::Message,
             content_value: ev.content.body,
@@ -241,7 +243,7 @@ fn convert_event(event: message::Event) -> seshat::Event {
             sender: ev.sender,
             server_ts: ev.server_ts,
             room_id: ev.room_id,
-            source: "".to_owned(),
+            source,
         },
         message::Event::Name(ev) => Event {
             event_type: EventType::Name,
@@ -251,7 +253,7 @@ fn convert_event(event: message::Event) -> seshat::Event {
             sender: ev.sender,
             server_ts: ev.server_ts,
             room_id: ev.room_id,
-            source: "".to_owned(),
+            source,
         },
         message::Event::Topic(ev) => Event {
             event_type: EventType::Message,
@@ -261,9 +263,11 @@ fn convert_event(event: message::Event) -> seshat::Event {
             sender: ev.sender,
             server_ts: ev.server_ts,
             room_id: ev.room_id,
-            source: "".to_owned(),
+            source,
         },
-    }
+    };
+
+    Ok(res)
 }
 
 #[cfg(test)]
@@ -320,12 +324,14 @@ mod tests {
 
         let message: AddHistoricEvents = serde_json::from_value(json!({
             "checkpoint": checkpoint.clone()
-        })).unwrap();
+        }))
+        .unwrap();
         indexer
             .add_history_events(message)
             .expect("add_crawler_checkpoint");
 
-        let message: AddHistoricEvents = serde_json::from_value(json!({ "oldCheckpoint": checkpoint })).unwrap();
+        let message: AddHistoricEvents =
+            serde_json::from_value(json!({ "oldCheckpoint": checkpoint })).unwrap();
         indexer
             .add_history_events(message)
             .expect("remove_crawler_checkpoint");
@@ -344,7 +350,8 @@ mod tests {
 
         let message: AddHistoricEvents = serde_json::from_value(json!({
             "checkpoint": checkpoint.clone()
-        })).unwrap();
+        }))
+        .unwrap();
         indexer
             .add_history_events(message)
             .expect("add_crawler_checkpoint");
@@ -358,7 +365,8 @@ mod tests {
                 }
             ],
             "oldCheckpoint": checkpoint
-        })).unwrap();
+        }))
+        .unwrap();
         indexer
             .add_history_events(message)
             .expect("add_history_events");
