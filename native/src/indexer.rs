@@ -161,6 +161,7 @@ pub(crate) fn handle_message(radical: &mut Radical, message_in: Value) -> Result
                 json!(null)
             }
             Message::DeleteEventIndex => Indexer::delete_event_index(&event_store)?,
+            Message::CloseEventIndex => json!(null), // no-op
             _ => bail!("index not initialized"),
         },
         Some(indexer) => match message {
