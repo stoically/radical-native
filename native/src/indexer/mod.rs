@@ -1,16 +1,14 @@
 use anyhow::{bail, Result};
 use serde_json::{json, Value};
-use seshat::{
-    CheckpointDirection, Config, Connection, Database, Event, EventType, Language, LoadConfig,
-    Profile, SearchResult,
-};
+use seshat::{Config, Connection, Database, Event, EventType, Language, LoadConfig, Profile};
 use std::path::PathBuf;
 
 mod message;
 
 use crate::Radical;
 use message::{
-    AddEventToIndex, AddHistoricEvents, DeleteEvent, InitEventIndex, Message, SearchEventIndex,
+    AddEventToIndex, AddHistoricEvents, DeleteEvent, FileEvent, InitEventIndex, Message,
+    SearchEventIndex, SearchResult, SearchResultContext, SearchResults,
 };
 
 pub(crate) fn handle_message(radical: &mut Radical, message_in: Value) -> Result<Value> {
@@ -102,20 +100,7 @@ impl Indexer {
 
     fn load_checkpoints(&mut self) -> Result<Value> {
         let checkpoints = self.connection.load_checkpoints()?;
-        let mut checkpoints_json = Vec::new();
-        for checkpoint in checkpoints {
-            let direction = match checkpoint.direction {
-                CheckpointDirection::Backwards => "b",
-                CheckpointDirection::Forwards => "f",
-            };
-            checkpoints_json.push(json!({
-                "roomId": checkpoint.room_id,
-                "token": checkpoint.token,
-                "fullCrawl": checkpoint.full_crawl,
-                "direction": direction,
-            }));
-        }
-        Ok(serde_json::to_value(&checkpoints_json)?)
+        Ok(json!(checkpoints))
     }
 
     fn is_event_index_empty(&mut self) -> Result<Value> {
@@ -153,36 +138,39 @@ impl Indexer {
     fn search_event_index(&mut self, message: SearchEventIndex) -> Result<Value> {
         let searcher = self.database.get_searcher();
         let (count, search_results) = searcher.search(&message.term, &message.config)?;
-        let mut json_results = Vec::new();
+
+        let mut results = Vec::new();
         for result in search_results {
-            let result: SearchResult = result;
             let event: Value = serde_json::from_str(&result.event_source)?;
-            let mut before = Vec::new();
+            let mut events_before = Vec::new();
             for event in result.events_before.iter() {
                 let event: Value = serde_json::from_str(event)?;
-                before.push(event);
+                events_before.push(event);
             }
-            let mut after = Vec::new();
+            let mut events_after = Vec::new();
             for event in result.events_after.iter() {
                 let event: Value = serde_json::from_str(event)?;
-                after.push(event);
+                events_after.push(event);
             }
-            let json_result = json!({
-                "rank": result.score,
-                "result": event,
-                "context": {
-                    "events_before": before,
-                    "events_after": after,
-                    "profile_info": result.profile_info
-                }
+
+            results.push(SearchResult {
+                rank: result.score,
+                result: event,
+                context: SearchResultContext {
+                    events_before,
+                    events_after,
+                    profile_info: result.profile_info,
+                },
             });
-            json_results.push(json_result);
         }
-        Ok(json!({
-            "count": count,
-            "results": json_results,
-            "highlights": []
-        }))
+
+        let res = SearchResults {
+            count,
+            results,
+            highlights: vec![],
+        };
+
+        Ok(json!(res))
     }
 
     fn load_file_events(&mut self, message: LoadConfig) -> Result<Value> {
@@ -190,26 +178,18 @@ impl Indexer {
         let mut results = Vec::new();
         for (source, profile) in ret {
             let event: Value = serde_json::from_str(&source)?;
-            results.push(json!({
-                "event": event,
-                "profile": profile
-            }));
+            results.push(FileEvent { event, profile });
         }
         Ok(json!(results))
     }
 
     fn get_stats(&mut self) -> Result<Value> {
-        let ret = self.connection.get_stats()?;
-        Ok(json!({
-            "eventCount": ret.event_count,
-            "roomCount": ret.room_count,
-            "size": ret.size
-        }))
+        let res = self.connection.get_stats()?;
+        Ok(json!(res))
     }
 
     fn delete_event(&mut self, message: DeleteEvent) -> Result<Value> {
         self.database.delete_event(&message.event_id).recv()??;
-
         Ok(json!(null))
     }
 }

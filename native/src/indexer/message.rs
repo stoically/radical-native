@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use seshat::{CrawlerCheckpoint, LoadConfig, Profile, SearchConfig};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "method")]
@@ -42,7 +43,6 @@ pub struct AddHistoricEvents {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct SearchEventIndex {
     pub term: String,
     pub config: SearchConfig,
@@ -107,4 +107,34 @@ pub struct EventTopic {
     pub server_ts: i64,
     pub room_id: String,
     pub topic: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchResults {
+    pub count: usize,
+    pub results: Vec<SearchResult>,
+    pub highlights: Vec<SearchHighlight>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub rank: f32,
+    pub result: Value,
+    pub context: SearchResultContext,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchResultContext {
+    pub events_before: Vec<Value>,
+    pub events_after: Vec<Value>,
+    pub profile_info: HashMap<String, Profile>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchHighlight {}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FileEvent {
+    pub event: Value,
+    pub profile: Profile,
 }
