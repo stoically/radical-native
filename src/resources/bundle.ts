@@ -156,7 +156,7 @@ const handleToBundleMessage = (message: any) => {
   }
 };
 
-window.addEventListener("message", function(event) {
+window.addEventListener("message", function (event) {
   if (event.source !== window || event?.data?.target !== "page") {
     return;
   }

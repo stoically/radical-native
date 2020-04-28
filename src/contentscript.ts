@@ -30,7 +30,7 @@ const handleSeshatMessage = async (message: any): Promise<void> => {
   window.postMessage(rpcReply, "*");
 };
 
-window.addEventListener("message", function(event) {
+window.addEventListener("message", function (event) {
   if (event.source !== window || event?.data?.target !== "contentscript") {
     return;
   }
