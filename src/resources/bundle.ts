@@ -68,10 +68,13 @@ class SeshatIndexManager {
     return this.postMessage({ method: "commitLiveEvents" });
   }
 
-  async searchEventIndex(searchConfig: any) {
+  async searchEventIndex(config: any) {
+    const term = config.search_term;
+    delete config.search_term;
+
     return this.postMessage({
       method: "searchEventIndex",
-      content: { searchConfig },
+      content: { term, config },
     });
   }
 
@@ -93,15 +96,15 @@ class SeshatIndexManager {
     });
   }
 
-  async removeCrawlerCheckpoint(checkpoint: any) {
+  async removeCrawlerCheckpoint(oldCheckpoint: any) {
     return this.postMessage({
       method: "removeCrawlerCheckpoint",
-      content: { checkpoint },
+      content: { oldCheckpoint },
     });
   }
 
   async loadFileEvents(args: any) {
-    return this.postMessage({ method: "loadFileEvents", content: { args } });
+    return this.postMessage({ method: "loadFileEvents", content: { ...args } });
   }
 
   async loadCheckpoints() {

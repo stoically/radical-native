@@ -1,57 +1,57 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use serde_json::{json, Value};
 use seshat::{
-    CheckpointDirection, Config, Connection, CrawlerCheckpoint, Database, Event, EventType,
-    Language, LoadConfig, LoadDirection, Profile, SearchConfig, SearchResult,
+    CheckpointDirection, Config, Connection, Database, Event, EventType, Language, LoadConfig,
+    Profile, SearchResult,
 };
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 
 mod message;
 
 use crate::Radical;
-use message::{Message, Method};
+use message::{
+    AddEventToIndex, AddHistoricEvents, DeleteEvent, InitEventIndex, Message, SearchEventIndex,
+};
 
 pub(crate) fn handle_message(radical: &mut Radical, message_in: Value) -> Result<Value> {
+    let event_store = match message_in.get("eventStore") {
+        Some(res) => res.to_string(),
+        None => "default".to_owned(),
+    };
     let message: Message = serde_json::from_value(message_in)?;
-    let indexer = radical.indexer.get_mut(&message.event_store);
 
-    let res = match indexer {
-        None => match message.method {
-            Method::InitEventIndex => {
-                let config = Indexer::message_to_config(message.raw)?;
-                let indexer = Indexer::new(&message.event_store, config)?;
-                radical
-                    .indexer
-                    .insert(message.event_store.to_owned(), indexer);
+    let res = match radical.indexer.get_mut(&event_store) {
+        None => match message {
+            Message::InitEventIndex(message) => {
+                let config = config(message);
+                let indexer = Indexer::new(&event_store, config)?;
+                radical.indexer.insert(event_store.to_owned(), indexer);
                 json!(null)
             }
-            Method::DeleteEventIndex => Indexer::delete_event_index(&message.event_store)?,
+            Message::DeleteEventIndex => Indexer::delete_event_index(&event_store)?,
             _ => bail!("index not initialized"),
         },
-        Some(indexer) => match message.method {
-            Method::LoadCheckpoints => indexer.load_checkpoints()?,
-            Method::IsEventIndexEmpty => indexer.is_event_index_empty()?,
-            Method::CommitLiveEvents => indexer.commit_live_events()?,
-            Method::AddEventToIndex => indexer.add_event_to_index(&message.content)?,
-            Method::AddCrawlerCheckpoint => indexer.add_history_events(&message.content)?,
-            Method::AddHistoricEvents => indexer.add_history_events(&message.content)?,
-            Method::RemoveCrawlerCheckpoint => {
-                indexer.remove_crawler_checkpoint(&message.content)?
-            }
-            Method::SearchEventIndex => indexer.search_event_index(&message.content)?,
-            Method::LoadFileEvents => indexer.load_file_events(&message.content)?,
-            Method::DeleteEvent => indexer.delete_event(&message.content)?,
-            Method::GetStats => indexer.get_stats()?,
-            Method::CloseEventIndex => {
-                radical.indexer.remove(&message.event_store);
+        Some(indexer) => match message {
+            Message::LoadCheckpoints => indexer.load_checkpoints()?,
+            Message::IsEventIndexEmpty => indexer.is_event_index_empty()?,
+            Message::CommitLiveEvents => indexer.commit_live_events()?,
+            Message::AddEventToIndex { content } => indexer.add_event_to_index(content)?,
+            Message::AddCrawlerCheckpoint { content } => indexer.add_history_events(content)?,
+            Message::AddHistoricEvents { content } => indexer.add_history_events(content)?,
+            Message::RemoveCrawlerCheckpoint { content } => indexer.add_history_events(content)?,
+            Message::SearchEventIndex { content } => indexer.search_event_index(content)?,
+            Message::LoadFileEvents { content } => indexer.load_file_events(content)?,
+            Message::DeleteEvent { content } => indexer.delete_event(content)?,
+            Message::GetStats => indexer.get_stats()?,
+            Message::CloseEventIndex => {
+                radical.indexer.remove(&event_store);
                 json!(null)
             }
-            Method::DeleteEventIndex => {
-                radical.indexer.remove(&message.event_store);
-                Indexer::delete_event_index(&message.event_store)?
+            Message::DeleteEventIndex => {
+                radical.indexer.remove(&event_store);
+                Indexer::delete_event_index(&event_store)?
             }
-            Method::InitEventIndex => json!(null), // no-op
-            Method::Unknown => bail!("unknown method"),
+            Message::InitEventIndex(_) => json!(null), // no-op
         },
     };
 
@@ -78,23 +78,6 @@ impl Indexer {
             database,
             connection,
         })
-    }
-
-    fn message_to_config(message: HashMap<String, Value>) -> Result<Config> {
-        let mut config = Config::new();
-
-        let passphrase = match message.get("passphrase") {
-            Some(passphrase) => passphrase.as_str().context("invalid config passphrase")?,
-            None => "DEFAULT_PASSPHRASE",
-        };
-        config = config.set_passphrase(passphrase);
-
-        if let Some(language) = message.get("language") {
-            let language = Language::from(language.as_str().context("invalid config language")?);
-            config = config.set_language(&language);
-        }
-
-        Ok(config)
     }
 
     fn event_store_path(event_store: &str) -> Result<PathBuf> {
@@ -145,48 +128,31 @@ impl Indexer {
         Ok(json!(true))
     }
 
-    fn add_event_to_index(&mut self, message: &Value) -> Result<Value> {
-        let event_json = get!(message, "ev");
-        let profile_json = get!(message, "profile");
-        let (event, profile) = parse_event(&event_json, &profile_json)?;
-        self.database.add_event(event, profile);
+    fn add_event_to_index(&mut self, content: AddEventToIndex) -> Result<Value> {
+        let event = convert_event(content.ev);
+        self.database.add_event(event, content.profile);
         Ok(json!(null))
     }
 
-    fn add_history_events(&mut self, message: &Value) -> Result<Value> {
-        let new_checkpoint: Option<CrawlerCheckpoint> = match message.get("checkpoint") {
-            Some(checkpoint) => Some(parse_checkpoint(checkpoint)?),
-            None => None,
-        };
-        let old_checkpoint: Option<CrawlerCheckpoint> = match message.get("oldCheckpoint") {
-            Some(checkpoint) => Some(parse_checkpoint(checkpoint)?),
-            None => None,
-        };
-
+    fn add_history_events(&mut self, message: AddHistoricEvents) -> Result<Value> {
         let mut events: Vec<(Event, Profile)> = Vec::new();
-        let events_json = message["events"].as_array();
-        if let Some(events_json) = events_json {
-            for event in events_json {
-                let event = parse_event(get!(event, "event"), get!(event, "profile"))?;
-                events.push(event);
+        if let Some(events_in) = message.events {
+            for event_in in events_in {
+                let profile = event_in.profile;
+                let event = convert_event(event_in.event);
+                events.push((event, profile));
             }
         }
 
         self.database
-            .add_historic_events(events, new_checkpoint, old_checkpoint)
+            .add_historic_events(events, message.checkpoint, message.old_checkpoint)
             .recv()??;
         Ok(json!(null))
     }
 
-    fn remove_crawler_checkpoint(&mut self, message: &Value) -> Result<Value> {
-        Ok(self.add_history_events(&json!({ "oldCheckpoint": get!(message, "checkpoint") }))?)
-    }
-
-    fn search_event_index(&mut self, message: &Value) -> Result<Value> {
-        let search_config = get!(message, "searchConfig");
-        let (term, config) = parse_search_object(&search_config)?;
+    fn search_event_index(&mut self, message: SearchEventIndex) -> Result<Value> {
         let searcher = self.database.get_searcher();
-        let (_, search_results) = searcher.search(&term, &config)?;
+        let (count, search_results) = searcher.search(&message.term, &message.config)?;
         let mut json_results = Vec::new();
         for result in search_results {
             let result: SearchResult = result;
@@ -213,26 +179,14 @@ impl Indexer {
             json_results.push(json_result);
         }
         Ok(json!({
-            "count": json_results.len(),
+            "count": count,
             "results": json_results,
             "highlights": []
         }))
     }
 
-    fn load_file_events(&mut self, message: &Value) -> Result<Value> {
-        let args = get!(message, "args");
-        let room_id = as_str!(args, "roomId");
-        let mut config = LoadConfig::new(room_id);
-        let limit = as_i64!(args, "limit");
-        config = config.limit(limit as usize);
-        if let Some(event) = args["fromEvent"].as_str() {
-            config = config.from_event(event);
-        }
-        if let Some(direction) = args["direction"].as_str() {
-            let direction = parse_load_direction(direction)?;
-            config = config.direction(direction);
-        }
-        let ret = self.connection.load_file_events(&config)?;
+    fn load_file_events(&mut self, message: LoadConfig) -> Result<Value> {
+        let ret = self.connection.load_file_events(&message)?;
         let mut results = Vec::new();
         for (source, profile) in ret {
             let event: Value = serde_json::from_str(&source)?;
@@ -253,129 +207,63 @@ impl Indexer {
         }))
     }
 
-    fn delete_event(&mut self, message: &Value) -> Result<Value> {
-        let event_id = as_str!(message, "eventId");
-        self.database.delete_event(&event_id).recv()??;
+    fn delete_event(&mut self, message: DeleteEvent) -> Result<Value> {
+        self.database.delete_event(&message.event_id).recv()??;
 
         Ok(json!(null))
     }
 }
 
-fn parse_event(event_json: &Value, profile_json: &Value) -> Result<(Event, Profile)> {
-    let event_content = get!(event_json, "content");
-    let event_type = as_str!(event_json, "type");
-    let (event_type, content_value, msgtype) = match event_type.as_ref() {
-        "m.room.message" => (
-            EventType::Message,
-            as_str!(event_content, "body"),
-            Some(as_str!(event_content, "msgtype")),
-        ),
-        "m.room.name" => (EventType::Name, as_str!(event_content, "name"), None),
-        "m.room.topic" => (EventType::Topic, as_str!(event_content, "topic"), None),
-        _ => bail!("Unknown event type while parsing event: {}", event_type),
+fn config(message: InitEventIndex) -> Config {
+    let mut config = Config::new();
+
+    let passphrase = match message.passphrase {
+        Some(passphrase) => passphrase,
+        None => "DEFAULT_PASSPHRASE".to_owned(),
     };
+    config = config.set_passphrase(passphrase);
 
-    let event_id = as_str!(event_json, "event_id");
-    let sender = as_str!(event_json, "sender");
-    let server_ts = as_i64!(event_json, "origin_server_ts");
-    let room_id = as_str!(event_json, "room_id");
-    let source = serde_json::to_string(event_json)?;
+    if let Some(language) = message.language {
+        let language = Language::from(language.as_str());
+        config = config.set_language(&language);
+    }
 
-    let event = Event {
-        event_type,
-        content_value,
-        msgtype,
-        event_id,
-        sender,
-        server_ts,
-        room_id,
-        source,
-    };
-    let profile: Profile = serde_json::from_value(profile_json.clone())?;
-
-    Ok((event, profile))
+    config
 }
 
-fn parse_checkpoint_direction(direction: &str) -> Result<CheckpointDirection> {
-    let direction = match direction.to_lowercase().as_ref() {
-        "backwards" | "backward" | "b" => CheckpointDirection::Backwards,
-        "forwards" | "forward" | "f" => CheckpointDirection::Forwards,
-        "" => CheckpointDirection::Backwards,
-        d => bail!("Unknown checkpoint direction {}", d),
-    };
-
-    Ok(direction)
-}
-
-fn parse_load_direction(direction: &str) -> Result<LoadDirection> {
-    let direction = match direction.to_lowercase().as_ref() {
-        "backwards" | "backward" | "b" => LoadDirection::Backwards,
-        "forwards" | "forward" | "f" => LoadDirection::Forwards,
-        "" => LoadDirection::Backwards,
-        d => bail!("Unknown checkpoint direction {}", d),
-    };
-
-    Ok(direction)
-}
-
-fn parse_checkpoint(checkpoint_json: &Value) -> Result<CrawlerCheckpoint> {
-    let room_id = as_str!(checkpoint_json, "roomId");
-    let token = as_str!(checkpoint_json, "token");
-    let full_crawl = checkpoint_json["fullCrawl"].as_bool().unwrap_or(false);
-
-    let direction = &checkpoint_json["direction"]
-        .as_str()
-        .unwrap_or("")
-        .to_string();
-    let direction = parse_checkpoint_direction(&direction)?;
-
-    Ok(CrawlerCheckpoint {
-        room_id,
-        token,
-        full_crawl,
-        direction,
-    })
-}
-
-fn parse_search_object(search_config: &Value) -> Result<(String, SearchConfig)> {
-    let term = as_str!(search_config, "search_term");
-
-    let mut config = SearchConfig::new();
-
-    if let Some(limit) = search_config["limit"].as_i64() {
-        config.limit(limit as usize);
+fn convert_event(event: message::Event) -> seshat::Event {
+    match event {
+        message::Event::Message(ev) => Event {
+            event_type: EventType::Message,
+            content_value: ev.content.body,
+            msgtype: ev.content.msgtype,
+            event_id: ev.event_id,
+            sender: ev.sender,
+            server_ts: ev.server_ts,
+            room_id: ev.room_id,
+            source: "".to_owned(),
+        },
+        message::Event::Name(ev) => Event {
+            event_type: EventType::Name,
+            content_value: ev.name,
+            msgtype: None,
+            event_id: ev.event_id,
+            sender: ev.sender,
+            server_ts: ev.server_ts,
+            room_id: ev.room_id,
+            source: "".to_owned(),
+        },
+        message::Event::Topic(ev) => Event {
+            event_type: EventType::Message,
+            content_value: ev.topic,
+            msgtype: None,
+            event_id: ev.event_id,
+            sender: ev.sender,
+            server_ts: ev.server_ts,
+            room_id: ev.room_id,
+            source: "".to_owned(),
+        },
     }
-
-    if let Some(before_limit) = search_config["before_limit"].as_i64() {
-        config.before_limit(before_limit as usize);
-    }
-
-    if let Some(after_limit) = search_config["after_limit"].as_i64() {
-        config.after_limit(after_limit as usize);
-    }
-
-    if let Some(order_by_recency) = search_config["order_by_recency"].as_bool() {
-        config.order_by_recency(order_by_recency);
-    }
-
-    if let Some(room_id) = search_config["room_id"].as_str() {
-        config.for_room(&room_id);
-    }
-
-    if let Some(keys) = search_config["keys"].as_array() {
-        for key in keys {
-            if let Some(key) = key.as_str() {
-                match key {
-                    "content.body" => config.with_key(EventType::Message),
-                    "content.topic" => config.with_key(EventType::Topic),
-                    "content.name" => config.with_key(EventType::Name),
-                    _ => bail!("Invalid search key while parsing search object {}", key),
-                };
-            }
-        }
-    }
-
-    Ok((term, config))
 }
 
 #[cfg(test)]
@@ -430,13 +318,16 @@ mod tests {
         let mut indexer = indexer(tmpdir.path());
         let checkpoint = checkpoint();
 
+        let message: AddHistoricEvents = serde_json::from_value(json!({
+            "checkpoint": checkpoint.clone()
+        })).unwrap();
         indexer
-            .add_history_events(&json!({
-                "checkpoint": checkpoint.clone()
-            }))
+            .add_history_events(message)
             .expect("add_crawler_checkpoint");
+
+        let message: AddHistoricEvents = serde_json::from_value(json!({ "oldCheckpoint": checkpoint })).unwrap();
         indexer
-            .remove_crawler_checkpoint(&json!({ "checkpoint": checkpoint }))
+            .add_history_events(message)
             .expect("remove_crawler_checkpoint");
 
         let checkpoints = indexer.load_checkpoints().expect("load_checkpoints");
@@ -451,23 +342,25 @@ mod tests {
         let checkpoint = checkpoint();
         let profile = Profile::new("Alice", "");
 
+        let message: AddHistoricEvents = serde_json::from_value(json!({
+            "checkpoint": checkpoint.clone()
+        })).unwrap();
         indexer
-            .add_history_events(&json!({
-                "checkpoint": checkpoint.clone()
-            }))
+            .add_history_events(message)
             .expect("add_crawler_checkpoint");
 
+        let message: AddHistoricEvents = serde_json::from_value(json!({
+            "checkpoint": checkpoint2(),
+            "events": [
+                {
+                    "event": event_room_message_text(),
+                    "profile": profile
+                }
+            ],
+            "oldCheckpoint": checkpoint
+        })).unwrap();
         indexer
-            .add_history_events(&json!({
-                "checkpoint": checkpoint2(),
-                "events": [
-                    {
-                        "event": event_room_message_text(),
-                        "profile": profile
-                    }
-                ],
-                "oldCheckpoint": checkpoint
-            }))
+            .add_history_events(message)
             .expect("add_history_events");
 
         assert_eq!(
@@ -487,11 +380,13 @@ mod tests {
         let mut indexer = indexer(tmpdir.path());
 
         let profile = Profile::new("Alice", "");
+        let payload: message::AddEventToIndex = serde_json::from_value(json!({
+            "ev": event_room_message_text(),
+            "profile": profile
+        }))
+        .unwrap();
         indexer
-            .add_event_to_index(&json!({
-                "ev": event_room_message_text(),
-                "profile": profile
-            }))
+            .add_event_to_index(payload)
             .expect("add_event_to_index");
 
         indexer.commit_live_events().expect("commit_live_events");
@@ -556,7 +451,7 @@ mod tests {
             json!({
                 "method": "removeCrawlerCheckpoint",
                 "content": {
-                    "checkpoint": checkpoint
+                    "oldCheckpoint": checkpoint
                 }
             }),
         )

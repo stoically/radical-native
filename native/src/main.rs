@@ -1,13 +1,10 @@
-#[macro_use]
-mod macros;
-
 use std::collections::HashMap;
-
-use indexer::Indexer;
-use native_messaging::{stdin, stdout_error, stdout_ready, stdout_reply};
 
 mod indexer;
 mod native_messaging;
+
+use indexer::Indexer;
+use native_messaging::{stdin, stdout_error, stdout_ready, stdout_reply};
 
 pub(crate) struct Radical {
     indexer: HashMap<String, Indexer>,

@@ -1473,7 +1473,7 @@ dependencies = [
 [[package]]
 name = "seshat"
 version = "1.3.3"
-source = "git+https://github.com/stoically/seshat?branch=thiserror#30001f4f7ea6e6d3c4eb7222fee8034f971ac40d"
+source = "git+https://github.com/stoically/seshat#42881d6e236fcffad496003d5d1de42edb330296"
 dependencies = [
  "aes-ctr",
  "byteorder",
@@ -1663,18 +1663,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.15"
+version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54b3d3d2ff68104100ab257bb6bb0cb26c901abe4bd4ba15961f3bf867924012"
+checksum = "d12a1dae4add0f0d568eebc7bf142f145ba1aa2544cafb195c76f0f409091b60"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.15"
+version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca972988113b7715266f91250ddb98070d033c62a011fa0fcc57434a649310dd"
+checksum = "3f34e0c1caaa462fd840ec6b768946ea1e7842620d94fe29d5b847138f521269"
 dependencies = [
  "proc-macro2",
  "quote",

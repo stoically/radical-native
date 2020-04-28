@@ -1,84 +1,109 @@
-use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
-use serde_json::Value;
-use std::{collections::HashMap, fmt};
+use serde::{Deserialize, Serialize};
+use seshat::{CrawlerCheckpoint, LoadConfig, Profile, SearchConfig};
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Message {
-    #[serde(deserialize_with = "method_to_enum")]
-    pub method: Method,
-    #[serde(default = "event_store_default")]
-    pub event_store: String,
-    #[serde(default)]
-    pub content: Value,
-    #[serde(flatten)]
-    pub raw: HashMap<String, Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Method {
-    InitEventIndex,
+#[serde(rename_all = "camelCase", tag = "method")]
+pub enum Message {
+    InitEventIndex(InitEventIndex),
     LoadCheckpoints,
     IsEventIndexEmpty,
     CommitLiveEvents,
-    AddEventToIndex,
-    AddCrawlerCheckpoint,
-    RemoveCrawlerCheckpoint,
-    AddHistoricEvents,
-    SearchEventIndex,
-    LoadFileEvents,
+    AddEventToIndex { content: AddEventToIndex },
+    AddCrawlerCheckpoint { content: AddHistoricEvents },
+    AddHistoricEvents { content: AddHistoricEvents },
+    RemoveCrawlerCheckpoint { content: AddHistoricEvents },
+    SearchEventIndex { content: SearchEventIndex },
+    LoadFileEvents { content: LoadConfig },
+    DeleteEvent { content: DeleteEvent },
+    GetStats,
     CloseEventIndex,
     DeleteEventIndex,
-    DeleteEvent,
-    GetStats,
-    Unknown,
 }
 
-struct MethodVisitor;
-
-impl<'de> Visitor<'de> for MethodVisitor {
-    type Value = Method;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a string")
-    }
-
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        let method = match value {
-            _ if value == "initEventIndex" => Method::InitEventIndex,
-            _ if value == "loadCheckpoints" => Method::LoadCheckpoints,
-            _ if value == "isEventIndexEmpty" => Method::IsEventIndexEmpty,
-            _ if value == "commitLiveEvents" => Method::CommitLiveEvents,
-            _ if value == "addEventToIndex" => Method::AddEventToIndex,
-            _ if value == "addCrawlerCheckpoint" => Method::AddCrawlerCheckpoint,
-            _ if value == "removeCrawlerCheckpoint" => Method::RemoveCrawlerCheckpoint,
-            _ if value == "addHistoricEvents" => Method::AddHistoricEvents,
-            _ if value == "searchEventIndex" => Method::SearchEventIndex,
-            _ if value == "loadFileEvents" => Method::LoadFileEvents,
-            _ if value == "closeEventIndex" => Method::CloseEventIndex,
-            _ if value == "deleteEventIndex" => Method::DeleteEventIndex,
-            _ if value == "deleteEvent" => Method::DeleteEvent,
-            _ if value == "getStats" => Method::GetStats,
-            _ => Method::Unknown,
-        };
-
-        Ok(method)
-    }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InitEventIndex {
+    pub passphrase: Option<String>,
+    pub language: Option<String>,
 }
 
-fn method_to_enum<'de, D>(deserializer: D) -> Result<Method, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserializer.deserialize_str(MethodVisitor)
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AddEventToIndex {
+    pub ev: Event,
+    pub profile: Profile,
 }
 
-fn event_store_default() -> String {
-    "default".to_owned()
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddHistoricEvents {
+    pub checkpoint: Option<CrawlerCheckpoint>,
+    pub old_checkpoint: Option<CrawlerCheckpoint>,
+    pub events: Option<Vec<Events>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchEventIndex {
+    pub term: String,
+    pub config: SearchConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteEvent {
+    pub event_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Events {
+    pub event: Event,
+    pub profile: Profile,
+}
+
+// remove duplication once specialization lands
+// https://github.com/rust-lang/rust/issues/31844
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum Event {
+    #[serde(rename = "m.room.message")]
+    Message(EventMessage),
+    #[serde(rename = "m.room.name")]
+    Name(EventName),
+    #[serde(rename = "m.room.topic")]
+    Topic(EventTopic),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventMessage {
+    pub event_id: String,
+    pub sender: String,
+    #[serde(rename = "origin_server_ts")]
+    pub server_ts: i64,
+    pub room_id: String,
+    pub content: EventMessageContent,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventMessageContent {
+    pub body: String,
+    pub msgtype: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventName {
+    pub event_id: String,
+    pub sender: String,
+    #[serde(rename = "origin_server_ts")]
+    pub server_ts: i64,
+    pub room_id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventTopic {
+    pub event_id: String,
+    pub sender: String,
+    #[serde(rename = "origin_server_ts")]
+    pub server_ts: i64,
+    pub room_id: String,
+    pub topic: String,
 }

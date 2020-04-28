@@ -12,7 +12,10 @@ pub(crate) fn stdin() -> Result<(i64, Value)> {
     let mut data_buffer = vec![0u8; size as usize];
     io::stdin().read_exact(&mut data_buffer)?;
     let message: Value = serde_json::from_slice(&data_buffer)?;
-    let rpc_id = as_i64!(message, "rpc_id");
+    let rpc_id = match message["rpc_id"].as_i64() {
+        Some(res) => res,
+        None => bail!("no rpc_id given"),
+    };
 
     Ok((rpc_id, message))
 }
