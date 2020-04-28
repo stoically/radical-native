@@ -155,7 +155,7 @@ pub struct EventTopicContent {
     pub topic: String,
 }
 
-pub(crate) fn handle_message(radical: &mut Radical, message_in: Value) -> Result<Value> {
+pub fn handle_message(radical: &mut Radical, message_in: Value) -> Result<Value> {
     let event_store = match message_in.get("eventStore") {
         Some(res) => res.as_str().context("eventStore.as_str() failed")?,
         None => "default",
@@ -188,7 +188,9 @@ pub(crate) fn handle_message(radical: &mut Radical, message_in: Value) -> Result
             Message::DeleteEvent { content } => indexer.delete_event(content)?,
             Message::GetStats => indexer.get_stats()?,
             Message::CloseEventIndex => {
-                radical.indexer.remove(&event_store);
+                if let Some(indexer) = radical.indexer.remove(&event_store) {
+                    indexer.shutdown()?;
+                }
                 json!(null)
             }
             Message::DeleteEventIndex => {
@@ -202,7 +204,7 @@ pub(crate) fn handle_message(radical: &mut Radical, message_in: Value) -> Result
     Ok(res)
 }
 
-pub(crate) struct Indexer {
+pub struct Indexer {
     database: Database,
     connection: Connection,
 }
@@ -244,12 +246,12 @@ impl Indexer {
         Ok(json!(null))
     }
 
-    fn load_checkpoints(&mut self) -> Result<Value> {
+    fn load_checkpoints(&self) -> Result<Value> {
         let checkpoints = self.connection.load_checkpoints()?;
         Ok(json!(checkpoints))
     }
 
-    fn is_event_index_empty(&mut self) -> Result<Value> {
+    fn is_event_index_empty(&self) -> Result<Value> {
         let empty = self.connection.is_empty()?;
         Ok(serde_json::to_value(empty)?)
     }
@@ -259,13 +261,13 @@ impl Indexer {
         Ok(json!(true))
     }
 
-    fn add_event_to_index(&mut self, message: AddEventToIndex) -> Result<Value> {
+    fn add_event_to_index(&self, message: AddEventToIndex) -> Result<Value> {
         let event = convert_event(message.ev)?;
         self.database.add_event(event, message.profile);
         Ok(json!(null))
     }
 
-    fn add_history_events(&mut self, message: AddHistoricEvents) -> Result<Value> {
+    fn add_history_events(&self, message: AddHistoricEvents) -> Result<Value> {
         let mut events: Vec<(seshat::Event, Profile)> = Vec::new();
         if let Some(events_in) = message.events {
             for event_in in events_in {
@@ -281,7 +283,7 @@ impl Indexer {
         Ok(json!(null))
     }
 
-    fn search_event_index(&mut self, message: SearchEventIndex) -> Result<Value> {
+    fn search_event_index(&self, message: SearchEventIndex) -> Result<Value> {
         let searcher = self.database.get_searcher();
         let (count, search_results) = searcher.search(&message.term, &message.config)?;
 
@@ -319,7 +321,7 @@ impl Indexer {
         Ok(json!(res))
     }
 
-    fn load_file_events(&mut self, message: LoadConfig) -> Result<Value> {
+    fn load_file_events(&self, message: LoadConfig) -> Result<Value> {
         let ret = self.connection.load_file_events(&message)?;
         let mut results = Vec::new();
         for (source, profile) in ret {
@@ -329,13 +331,18 @@ impl Indexer {
         Ok(json!(results))
     }
 
-    fn get_stats(&mut self) -> Result<Value> {
+    fn get_stats(&self) -> Result<Value> {
         let res = self.connection.get_stats()?;
         Ok(json!(res))
     }
 
-    fn delete_event(&mut self, message: DeleteEvent) -> Result<Value> {
+    fn delete_event(&self, message: DeleteEvent) -> Result<Value> {
         self.database.delete_event(&message.event_id).recv()??;
+        Ok(json!(null))
+    }
+
+    fn shutdown(self) -> Result<Value> {
+        self.database.shutdown().recv()??;
         Ok(json!(null))
     }
 }
@@ -445,7 +452,7 @@ mod tests {
     #[test]
     fn crawler_checkpoints() {
         let tmpdir = tempdir().expect("tempdir");
-        let mut indexer = indexer(tmpdir.path());
+        let indexer = indexer(tmpdir.path());
         let checkpoint = checkpoint();
 
         let message: AddHistoricEvents = serde_json::from_value(json!({
@@ -470,7 +477,7 @@ mod tests {
     #[test]
     fn initial_crawl() {
         let tmpdir = tempdir().expect("tempdir");
-        let mut indexer = indexer(tmpdir.path());
+        let indexer = indexer(tmpdir.path());
         let checkpoint = checkpoint();
         let profile = Profile::new("Alice", "");
 

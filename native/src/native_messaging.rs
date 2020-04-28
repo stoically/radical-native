@@ -3,7 +3,7 @@ use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use serde_json::{json, Value};
 use std::io::{self, prelude::*, Cursor};
 
-pub(crate) fn stdin() -> Result<(i64, Value)> {
+pub fn stdin() -> Result<(i64, Value)> {
     let mut buffer = [0; 4];
     io::stdin().read_exact(&mut buffer)?;
     let mut buf = Cursor::new(&buffer);
@@ -20,14 +20,14 @@ pub(crate) fn stdin() -> Result<(i64, Value)> {
     Ok((rpc_id, message))
 }
 
-pub(crate) fn stdout_ready() {
+pub fn stdout_ready() {
     stdout(json!({
         "ready": true
     }))
     .unwrap_or_else(|error| eprintln!("{:?}", error));
 }
 
-pub(crate) fn stdout_reply(rpc_id: i64, reply: Value) {
+pub fn stdout_reply(rpc_id: i64, reply: Value) {
     stdout(json!({
         "rpc_id": rpc_id,
         "reply": reply,
@@ -35,7 +35,7 @@ pub(crate) fn stdout_reply(rpc_id: i64, reply: Value) {
     .unwrap_or_else(|error| eprintln!("{:?}", error));
 }
 
-pub(crate) fn stdout_error(rpc_id: i64, error: Error) {
+pub fn stdout_error(rpc_id: i64, error: Error) {
     stdout(json!({
         "rpc_id": rpc_id,
         "error": format!("{:?}", error),

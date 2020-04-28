@@ -6,7 +6,7 @@ mod native_messaging;
 use indexer::Indexer;
 use native_messaging::{stdin, stdout_error, stdout_ready, stdout_reply};
 
-pub(crate) struct Radical {
+pub struct Radical {
     indexer: HashMap<String, Indexer>,
 }
 
