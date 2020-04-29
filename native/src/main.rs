@@ -3,17 +3,18 @@ use std::collections::HashMap;
 mod indexer;
 mod native_messaging;
 
-use indexer::Indexer;
+use indexer::IndexerMap;
 use native_messaging::{stdin, stdout_error, stdout_ready, stdout_reply};
 
 pub struct Radical {
-    indexer: HashMap<String, Indexer>,
+    indexer: IndexerMap,
 }
 
 fn main() {
     let mut radical = Radical {
         indexer: HashMap::new(),
     };
+
     stdout_ready();
     loop {
         let (rpc_id, message_in) = match stdin() {

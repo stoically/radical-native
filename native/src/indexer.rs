@@ -166,12 +166,12 @@ pub fn handle_message(radical: &mut Radical, message_in: Value) -> Result<Value>
     let res = match radical.indexer.get_mut(&event_store) {
         None => match message {
             Message::InitEventIndex(message) => {
-                let config = config(message);
+                let config = Indexer::config(message);
                 let indexer = Indexer::new(&event_store, config)?;
                 radical.indexer.insert(event_store.to_owned(), indexer);
                 json!(null)
             }
-            Message::DeleteEventIndex => Indexer::delete_event_index(&event_store)?,
+            Message::DeleteEventIndex => Indexer::delete(&event_store, &mut radical.indexer)?,
             Message::CloseEventIndex => json!(null), // no-op
             _ => bail!("index not initialized"),
         },
@@ -187,22 +187,16 @@ pub fn handle_message(radical: &mut Radical, message_in: Value) -> Result<Value>
             Message::LoadFileEvents { content } => indexer.load_file_events(content)?,
             Message::DeleteEvent { content } => indexer.delete_event(content)?,
             Message::GetStats => indexer.get_stats()?,
-            Message::CloseEventIndex => {
-                if let Some(indexer) = radical.indexer.remove(&event_store) {
-                    indexer.shutdown()?;
-                }
-                json!(null)
-            }
-            Message::DeleteEventIndex => {
-                radical.indexer.remove(&event_store);
-                Indexer::delete_event_index(&event_store)?
-            }
+            Message::CloseEventIndex => Indexer::shutdown(&event_store, &mut radical.indexer)?,
+            Message::DeleteEventIndex => Indexer::delete(&event_store, &mut radical.indexer)?,
             Message::InitEventIndex(_) => json!(null), // no-op
         },
     };
 
     Ok(res)
 }
+
+pub type IndexerMap = HashMap<String, Indexer>;
 
 pub struct Indexer {
     database: Database,
@@ -237,13 +231,78 @@ impl Indexer {
         Ok(path)
     }
 
-    fn delete_event_index(event_store: &str) -> Result<Value> {
+    fn shutdown(event_store: &str, indexer: &mut IndexerMap) -> Result<Value> {
+        if let Some(indexer) = indexer.remove(event_store) {
+            indexer.database.shutdown().recv()??;
+        }
+        Ok(json!(null))
+    }
+
+    fn delete(event_store: &str, indexer: &mut IndexerMap) -> Result<Value> {
+        Indexer::shutdown(event_store, indexer)?;
+
         let path = Indexer::event_store_path(event_store)?;
         if path.exists() {
             std::fs::remove_dir_all(path)?;
         }
 
         Ok(json!(null))
+    }
+
+    fn config(message: InitEventIndex) -> Config {
+        let mut config = Config::new();
+    
+        let passphrase = match message.passphrase {
+            Some(passphrase) => passphrase,
+            None => "DEFAULT_PASSPHRASE".to_owned(),
+        };
+        config = config.set_passphrase(passphrase);
+    
+        if let Some(language) = message.language {
+            let language = Language::from(language.as_str());
+            config = config.set_language(&language);
+        }
+    
+        config
+    }
+    
+    fn convert_event(event: Value) -> Result<seshat::Event> {
+        let source = serde_json::to_string(&event)?;
+        let event: Event = serde_json::from_value(event)?;
+        let res = match event {
+            Event::Message(ev) => seshat::Event {
+                event_type: EventType::Message,
+                content_value: ev.content.body,
+                msgtype: ev.content.msgtype,
+                event_id: ev.event_id,
+                sender: ev.sender,
+                server_ts: ev.server_ts,
+                room_id: ev.room_id,
+                source,
+            },
+            Event::Name(ev) => seshat::Event {
+                event_type: EventType::Name,
+                content_value: ev.content.name,
+                msgtype: None,
+                event_id: ev.event_id,
+                sender: ev.sender,
+                server_ts: ev.server_ts,
+                room_id: ev.room_id,
+                source,
+            },
+            Event::Topic(ev) => seshat::Event {
+                event_type: EventType::Message,
+                content_value: ev.content.topic,
+                msgtype: None,
+                event_id: ev.event_id,
+                sender: ev.sender,
+                server_ts: ev.server_ts,
+                room_id: ev.room_id,
+                source,
+            },
+        };
+    
+        Ok(res)
     }
 
     fn load_checkpoints(&self) -> Result<Value> {
@@ -262,7 +321,7 @@ impl Indexer {
     }
 
     fn add_event_to_index(&self, message: AddEventToIndex) -> Result<Value> {
-        let event = convert_event(message.ev)?;
+        let event = Indexer::convert_event(message.ev)?;
         self.database.add_event(event, message.profile);
         Ok(json!(null))
     }
@@ -272,7 +331,7 @@ impl Indexer {
         if let Some(events_in) = message.events {
             for event_in in events_in {
                 let profile = event_in.profile;
-                let event = convert_event(event_in.event)?;
+                let event = Indexer::convert_event(event_in.event)?;
                 events.push((event, profile));
             }
         }
@@ -340,67 +399,6 @@ impl Indexer {
         self.database.delete_event(&message.event_id).recv()??;
         Ok(json!(null))
     }
-
-    fn shutdown(self) -> Result<Value> {
-        self.database.shutdown().recv()??;
-        Ok(json!(null))
-    }
-}
-
-fn config(message: InitEventIndex) -> Config {
-    let mut config = Config::new();
-
-    let passphrase = match message.passphrase {
-        Some(passphrase) => passphrase,
-        None => "DEFAULT_PASSPHRASE".to_owned(),
-    };
-    config = config.set_passphrase(passphrase);
-
-    if let Some(language) = message.language {
-        let language = Language::from(language.as_str());
-        config = config.set_language(&language);
-    }
-
-    config
-}
-
-fn convert_event(event: Value) -> Result<seshat::Event> {
-    let source = serde_json::to_string(&event)?;
-    let event: Event = serde_json::from_value(event)?;
-    let res = match event {
-        Event::Message(ev) => seshat::Event {
-            event_type: EventType::Message,
-            content_value: ev.content.body,
-            msgtype: ev.content.msgtype,
-            event_id: ev.event_id,
-            sender: ev.sender,
-            server_ts: ev.server_ts,
-            room_id: ev.room_id,
-            source,
-        },
-        Event::Name(ev) => seshat::Event {
-            event_type: EventType::Name,
-            content_value: ev.content.name,
-            msgtype: None,
-            event_id: ev.event_id,
-            sender: ev.sender,
-            server_ts: ev.server_ts,
-            room_id: ev.room_id,
-            source,
-        },
-        Event::Topic(ev) => seshat::Event {
-            event_type: EventType::Message,
-            content_value: ev.content.topic,
-            msgtype: None,
-            event_id: ev.event_id,
-            sender: ev.sender,
-            server_ts: ev.server_ts,
-            room_id: ev.room_id,
-            source,
-        },
-    };
-
-    Ok(res)
 }
 
 #[cfg(test)]
