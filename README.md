@@ -1,6 +1,6 @@
 # Radical Native
 
-[![Radical Native Matrix room #radical-webext:matrix.org](https://img.shields.io/matrix/radical-webext:matrix.org.svg?label=%23radical-webext:matrix.org&logo=matrix&server_fqdn=matrix.org)](https://matrix.to/#/#radical-webext:matrix.org)
+[![Radical Native Matrix room #radical-webext:matrix.org](https://img.shields.io/badge/matrix-%23radical--webext%3Amatrix.org-blue)](https://matrix.to/#/#radical-webext:matrix.org)
 
 Extending [Riot Web](https://github.com/vector-im/riot-web) with native capabilities
 
