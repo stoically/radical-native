@@ -311,8 +311,8 @@ impl Indexer {
     }
 
     fn is_event_index_empty(&self) -> Result<Value> {
-        let empty = self.connection.is_empty()?;
-        Ok(serde_json::to_value(empty)?)
+        let res = self.connection.is_empty()?;
+        Ok(json!(res))
     }
 
     fn commit_live_events(&mut self) -> Result<Value> {
@@ -336,10 +336,11 @@ impl Indexer {
             }
         }
 
-        self.database
+        let res = self.database
             .add_historic_events(events, message.checkpoint, message.old_checkpoint)
             .recv()??;
-        Ok(json!(null))
+
+        Ok(json!(res))
     }
 
     fn search_event_index(&self, message: SearchEventIndex) -> Result<Value> {
@@ -396,8 +397,8 @@ impl Indexer {
     }
 
     fn delete_event(&self, message: DeleteEvent) -> Result<Value> {
-        self.database.delete_event(&message.event_id).recv()??;
-        Ok(json!(null))
+        let res = self.database.delete_event(&message.event_id).recv()??;
+        Ok(json!(res))
     }
 }
 
