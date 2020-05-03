@@ -7,11 +7,11 @@ NASM_VERSION="2.14.02"
 OPENSSL_VERSION="1.1.1f"
 SQLCIPHER_VERSION="4.3.0"
 
+mkdir -p target/release
 mkdir -p build/native/opt
+
 OPT_DIR=$(realpath build/native/opt)
-# https://stackoverflow.com/a/13701495
-OPT_WIN_DIR=$(echo "${OPT_DIR}" | sed -e 's/^\///' -e 's/\//\\/g' -e 's/^./\0:/')
-cd build/native || exit 1
+export OPT_DIR
 
 fetch_openssl() {
     [ -d "openssl-${OPENSSL_VERSION}" ] && return
@@ -27,10 +27,22 @@ fetch_sqlcipher() {
     tar xzf sqlcipher.tgz
 }
 
+native_manifest() {
+    echo $(cat <<-END
+{
+    "name": "radical.native",
+    "description": "Radical Native",
+    "path": "$1",
+    "type": "stdio",
+    "allowed_extensions": [ "@radical-native" ]
+}
+END
+)
+}
+
 linux() {
-    mkdir -p build/native
-    cd build/native/linux || exit 1
-    fetch_sqlcipher
+    native_manifest "/usr/bin/radical-native" > target/release/radical.native.json
+    cargo deb -p radical-native
 }
 
 win_install_nasm() {
@@ -82,32 +94,42 @@ win_build_sqlcipher() {
     cd ..
 }
 
-# tested with
+# locally tested with
+# - Windows 10 Pro VM on x86_amd64
 # - Git for Windows bash (MINGW64)
 # - Visual Studio Build Tools 2019
-#   - C++ build tools
+#   + C++ build tools
 #     + MSVC VS 2019
 #     + Windows 10 SDK
 #     + C++ CMake tools
+# - NSIS 3
 win() {
+    # https://stackoverflow.com/a/13701495
+    OPT_WIN_DIR=$(echo "${OPT_DIR}" | sed -e 's/^\///' -e 's/\//\\/g' -e 's/^./\0:/')
+    export OPT_WIN_DIR
+
+    pushd build/native || exit 1
     fetch_openssl
     fetch_sqlcipher
     win_vcvarsall
     win_install_nasm
     win_build_openssl
     win_build_sqlcipher
+    popd
 
     SQLCIPHER_STATIC="1"
     SQLCIPHER_LIB_DIR="${OPT_WIN_DIR}\lib"
     SQLCIPHER_INCLUDE_DIR="${OPT_WIN_DIR}\include"
     export SQLCIPHER_STATIC SQLCIPHER_LIB_DIR SQLCIPHER_INCLUDE_DIR
 
-    #CARGO_TARGET_DIR="$HOME/target" \
-    RUSTFLAGS="-Ctarget-feature=+crt-static -Clink-args=libcrypto.lib -L${OPT_WIN_DIR}\lib" \
-    RUSTUP_TOOLCHAIN="stable-x86_64-pc-windows-msvc" \
+    RUSTFLAGS="-Ctarget-feature=+crt-static -Clink-args=libcrypto.lib -L${OPT_WIN_DIR}\lib"
+    RUSTUP_TOOLCHAIN="stable-x86_64-pc-windows-msvc"
+    export RUSTFLAGS RUSTUP_TOOLCHAIN
+
+    cargo test
     cargo build --release
 
-    ls -al ../../target/release
+    /c/Program\ Files\ \(x86\)/NSIS/Bin/makensis.exe native/scripts/win.nsi
 }
 
 case "$OSTYPE" in

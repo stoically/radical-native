@@ -1,7 +1,0 @@
-{
-    "name": "radical.native",
-    "description": "Radical Native",
-    "path": "/usr/bin/radical-native",
-    "type": "stdio",
-    "allowed_extensions": [ "@radical-native" ]
-}

@@ -221,7 +221,7 @@ impl Indexer {
     }
 
     fn event_store_path(event_store: &str) -> Result<PathBuf> {
-        let mut path = match dirs::data_dir() {
+        let mut path = match dirs::data_local_dir() {
             Some(path) => path,
             None => bail!("userdata dir not found"),
         };

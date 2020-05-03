@@ -3,25 +3,25 @@ name: build
 on: [push, pull_request]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  build_and_upload:
+    name: build
+    runs-on: ${{ matrix.config.os }}
     strategy:
       matrix:
-        node-version: [12.x]
+        config:
+          #- { os: ubuntu-latest, release_uname: "linux-x86_64" }
+          #- { os: macos-latest, release_uname: "mac" }
+          - { os: windows-latest, release_uname: "windows" }
 
     steps:
       - uses: actions/checkout@v1
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: nodejs
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
 
       - name: build
         run: |
-          sudo apt-get install libsqlcipher-dev libsqlcipher0
           npm install
           npm run lint
-          npm run test
-          npm run build:firefox
-          npm run build:cargo
+          npm run build
