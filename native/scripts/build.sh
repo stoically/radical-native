@@ -10,7 +10,7 @@ SQLCIPHER_VERSION="4.3.0"
 mkdir -p target/release
 mkdir -p build/native/opt
 
-OPT_DIR=$(realpath build/native/opt)
+OPT_DIR="$PWD/build/native/opt"
 export OPT_DIR
 
 fetch_openssl() {
@@ -43,6 +43,36 @@ linux() {
     native_manifest "/usr/bin/radical-native" > target/release/radical.native.json
     cargo test
     cargo deb -p radical-native
+}
+
+macos_build_sqlcipher() {
+    cd sqlcipher-${SQLCIPHER_VERSION} || exit 1
+
+    CFLAGS=-DSQLITE_HAS_CODEC \
+    LDFLAGS="-framework Security -framework Foundation" \
+    ./configure \
+        --prefix="${OPT_DIR}" \
+        --enable-tempstore=yes \
+        --enable-shared=no \
+        --with-crypto-lib=commoncrypto
+    
+    make
+    make install
+    
+    cd ..
+}
+
+macos() {
+    pushd build/native || exit 1
+    fetch_sqlcipher
+    macos_build_sqlcipher
+    popd
+
+    RUSTFLAGS="-L${OPT_DIR}/lib"
+    export RUSTFLAGS
+
+    cargo test
+    cargo build --release
 }
 
 win_install_nasm() {
@@ -134,7 +164,7 @@ win() {
 
 case "$OSTYPE" in
   linux*)  linux ;;
-  darwin)  macos ;; 
+  darwin*)  macos ;; 
   msys)    win ;;
   *)       echo "Unsupported OS: $OSTYPE"
            exit 1
