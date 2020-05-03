@@ -59,7 +59,7 @@
   ],
   "prettier": {
     "trailingComma": "es5",
-    "endOfLine":"auto"
+    "endOfLine": "auto"
   },
   "mocha": {
     "bail": true,

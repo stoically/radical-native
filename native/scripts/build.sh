@@ -28,7 +28,7 @@ fetch_sqlcipher() {
 }
 
 native_manifest() {
-    echo $(cat <<-END
+    cat <<-END
 {
     "name": "radical.native",
     "description": "Radical Native",
@@ -37,11 +37,11 @@ native_manifest() {
     "allowed_extensions": [ "@radical-native" ]
 }
 END
-)
 }
 
 linux() {
     native_manifest "/usr/bin/radical-native" > target/release/radical.native.json
+    cargo test
     cargo deb -p radical-native
 }
 
@@ -138,5 +138,4 @@ case "$OSTYPE" in
   msys)    win ;;
   *)       echo "Unsupported OS: $OSTYPE"
            exit 1
-           ;;
 esac

@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         config:
-          #- { os: ubuntu-latest, release_uname: "linux-x86_64" }
+          - { os: ubuntu-latest, release_uname: "linux-x86_64" }
           #- { os: macos-latest, release_uname: "mac" }
           - { os: windows-latest, release_uname: "windows" }
 
@@ -19,6 +19,12 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
+
+      - name: ubuntu
+        if: matrix.config.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get install libsqlcipher0 libsqlcipher-dev
+          cargo install cargo-deb
 
       - name: build
         run: |
