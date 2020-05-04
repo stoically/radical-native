@@ -94,7 +94,7 @@ macos() {
     productbuild --distribution "${NATIVE_RES_PATH}/Distribution" \
          --resources "${NATIVE_RES_PATH}/Resources" \
         --package-path "${PKG_PACKAGE_PATH}" \
-        "${PKG_PATH}/radical-native.pkg"
+        ./target/release/radical-native.pkg
 }
 
 win_install_nasm() {

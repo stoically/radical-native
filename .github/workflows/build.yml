@@ -27,6 +27,7 @@ jobs:
           cargo install cargo-deb
 
       - name: build
+        shell: bash
         run: |
           npm install
           npm run lint
