@@ -42,7 +42,7 @@ END
 linux() {
     native_manifest "/usr/bin/radical-native" > target/release/radical.native.json
     cargo test
-    cargo deb -p radical-native
+    cargo deb -p radical-native --output target/release/radical-native.deb
 }
 
 macos_build_sqlcipher() {
@@ -73,6 +73,28 @@ macos() {
 
     cargo test
     cargo build --release
+
+    NATIVE_RES_PATH="./native/res/darwin"
+    PKG_PATH="./build/native/pkg"
+    PKG_ROOT_PATH="${PKG_PATH}/root"
+    PKG_INST_PATH="${PKG_ROOT_PATH}/Library/RadicalNative"
+    PKG_PACKAGE_PATH="${PKG_PATH}/package"
+    rm -rf "${PKG_PATH}"
+    mkdir -p "${PKG_PATH}" "${PKG_INST_PATH}" "${PKG_PACKAGE_PATH}"
+
+    native_manifest "/Library/RadicalNative/radical-native" > "${PKG_INST_PATH}/radical.native.json"
+    cp ./target/release/radical-native "${PKG_INST_PATH}"
+
+    pkgbuild --identifier io.github.stoically.radical-native \
+      --version 0.1.0 \
+      --scripts "${NATIVE_RES_PATH}/scripts" \
+      --root "${PKG_ROOT_PATH}" \
+      "${PKG_PACKAGE_PATH}/radical-native.pkg"
+
+    productbuild --distribution "${NATIVE_RES_PATH}/Distribution" \
+         --resources "${NATIVE_RES_PATH}/Resources" \
+        --package-path "${PKG_PACKAGE_PATH}" \
+        "${PKG_PATH}/radical-native.pkg"
 }
 
 win_install_nasm() {
@@ -159,7 +181,7 @@ win() {
     cargo test
     cargo build --release
 
-    /c/Program\ Files\ \(x86\)/NSIS/Bin/makensis.exe native/scripts/win.nsi
+    /c/Program\ Files\ \(x86\)/NSIS/Bin/makensis.exe native/res/win.nsi
 }
 
 case "$OSTYPE" in

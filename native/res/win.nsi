@@ -1,5 +1,6 @@
 !include "WordFunc.nsh"
 
+Name "Radical Native"
 Outfile ..\..\target\release\radical-native-installer.exe
 Unicode true
 InstallDir $PROGRAMFILES64\radical-native
