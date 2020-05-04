@@ -11,29 +11,21 @@ Extending [Riot Web](https://github.com/vector-im/riot-web) with native capabili
 - [ ] Secure OS key storage (similar to e.g. [keytar](https://www.npmjs.com/package/keytar))
 - [ ] Tray icon
 
-#### Supported Platforms
-
-- [x] Linux
-- [x] MacOS
-- [ ] Windows
-
 #### Supported Browsers
 
 - [x] Firefox
 - [ ] Chrome
 
-#### Supported Riots
-
-- [x] Riot Web over HTTP
-- [x] [Radical](https://github.com/stoically/radical): Riot Web bundled as Firefox Add-on
-
 ## Install
 
-### 1. Radical Native Binary
+### 1. Radical Native
 
-- Ubuntu/Debian: [Install the binary from the latest released `.deb` file](https://github.com/stoically/radical-native/releases)
+- Ubuntu/Debian: [Install with the latest released `.deb` file](https://github.com/stoically/radical-native/releases)
+- MacOS: [Install with the latest released `.pkg` file](https://github.com/stoically/radical-native/releases)
+  - Note: Requires Ctrl+Click on the `.pkg` since the installer isn't signed yet
+- Windows: [Install with the latest released `.exe` file](https://github.com/stoically/radical-native/releases)
 
-Hint: The event store is saved into the `radical-native` directory inside your [user data directory](https://github.com/soc/dirs-rs#features).
+Hint: The event store is saved into the `radical-native` directory inside your [local user data directory](https://github.com/soc/dirs-rs#features).
 
 ### 2. Radical Native Add-on
 
@@ -43,16 +35,10 @@ The Radical Native Firefox Add-on facilitates the communication between Riot Web
 
 ## Usage
 
-### Riot Web over HTTP
-
 - Open any Riot website in your browser
 - Click the Radical Native icon in the toolbar (RAM icon)
-- Riot website should reload and icon should have an "on" badge
+- Riot website should reload and the toolbar icon should have an "on" badge
 - Check Riot's "Settings > Security & Privacy > Message search > Manage", it should show ongoing work
-
-### Radical Add-on
-
-- See https://github.com/stoically/radical#search
 
 ## Troubleshooting
 
