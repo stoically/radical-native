@@ -4,23 +4,31 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    name: build
+    runs-on: ${{ matrix.config.os }}
     strategy:
       matrix:
-        node-version: [12.x]
+        config:
+          - { os: ubuntu-latest, release_uname: "linux-x86_64" }
+          - { os: macos-latest, release_uname: "mac" }
+          - { os: windows-latest, release_uname: "windows" }
 
     steps:
       - uses: actions/checkout@v1
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: nodejs
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: build
+      - name: ubuntu
+        if: matrix.config.os == 'ubuntu-latest'
         run: |
-          sudo apt-get install libsqlcipher-dev libsqlcipher0
+          sudo apt-get install libsqlcipher0 libsqlcipher-dev
+          cargo install cargo-deb
+
+      - name: build
+        shell: bash
+        run: |
           npm install
           npm run lint
-          npm run test
-          npm run build
+          npm run build:native

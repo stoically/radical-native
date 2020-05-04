@@ -1,0 +1,4 @@
+#!/bin/bash
+
+mkdir -p /Library/Application\ Support/Mozilla/NativeMessagingHosts
+ln -nfs /Library/RadicalNative/radical.native.json /Library/Application\ Support/Mozilla/NativeMessagingHosts
