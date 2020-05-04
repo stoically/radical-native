@@ -52,6 +52,9 @@ export class SeshatPort {
   private handleMessage(message: any): void {
     if (message.ready) {
       debug("port ready");
+      browser.browserAction.enable();
+      browser.browserAction.setTitle({ title: "Radical Native" });
+      browser.browserAction.setBadgeText({ text: null });
       this.ready = true;
       return;
     }
@@ -81,5 +84,17 @@ export class SeshatPort {
   private handleDisconnect(port: browser.runtime.Port): void {
     debug("port disconnected", port);
     this.close();
+
+    if (port.error) {
+      browser.browserAction.setBadgeText({ text: "err" });
+      browser.browserAction.setTitle({
+        title: "Cannot connect to the native application, trying again in 60s",
+      });
+    }
+
+    debug("retrying port connection in 60s");
+    setTimeout(() => {
+      this.init();
+    }, 60 * 1000);
   }
 }

@@ -18,6 +18,10 @@ export class Background {
   private riotTabs: Set<number> = new Set();
 
   constructor() {
+    browser.browserAction.disable();
+    browser.browserAction.setBadgeText({ text: "init" });
+    browser.browserAction.setTitle({ title: "Initializing.." });
+
     this.initializedPromise = new Promise(this.initialize.bind(this));
     this.setupListeners();
   }
@@ -182,6 +186,10 @@ export class Background {
         });
       });
 
+    browser.browserAction.setTitle({
+      title: "Radical Native active for this Riot. Click to disable.",
+      tabId: details.tabId,
+    });
     browser.browserAction.setBadgeText({
       tabId: details.tabId,
       text: "on",
@@ -217,6 +225,15 @@ export class Background {
 
   private async onBrowserActionClick(tab: browser.tabs.Tab): Promise<void> {
     debug("browser action clicked", tab);
+    if (!tab.url?.startsWith("http")) {
+      browser.browserAction.disable(tab.id);
+      browser.browserAction.setTitle({
+        title: `Can't activate Radical Native for ${tab.url}`,
+        tabId: tab.id,
+      });
+      browser.browserAction.setBadgeText({ text: "err", tabId: tab.id });
+      return;
+    }
     const url = new URL(tab.url!);
     const riot = {
       protocol: url.protocol,
