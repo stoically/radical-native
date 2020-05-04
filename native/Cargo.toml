@@ -2,7 +2,7 @@
 name = "radical-native"
 description = "Extending Riot Web with native capabilities"
 authors = ["stoically <stoically@protonmail.com>"]
-version = "0.1.0-beta.10"
+version = "0.1.0-beta.11"
 edition = "2018"
 license = "MIT"
 
