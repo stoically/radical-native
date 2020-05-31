@@ -1,7 +1,0 @@
-{
-  "name": "webext",
-  "browserslist": [
-    "Firefox >= 67",
-    "last 2 Chrome versions"
-  ]
-}

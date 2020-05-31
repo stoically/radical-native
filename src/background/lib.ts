@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { debug } from "./debug";
-import { NativePort } from "../../port/native";
+import { NativePort } from "./native";
 
 export class Background {
   public manifest = browser.runtime.getManifest();
