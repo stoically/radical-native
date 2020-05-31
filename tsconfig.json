@@ -7,8 +7,8 @@
     "esModuleInterop": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["src/*"]
+      "~/*": ["/*"]
     }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": ["port/**/*.ts", "webext/**/*.ts", "test/**/*.ts"]
 }

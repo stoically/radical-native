@@ -1,14 +1,12 @@
 import { v4 as uuidv4 } from "uuid";
 import { debug } from "./debug";
-import { Management } from "./management";
-import { SeshatPort } from "./ports/seshat";
+import { NativePort } from "../../port/native";
 
 export class Background {
   public manifest = browser.runtime.getManifest();
   public version = this.manifest.version;
   public browserType = this.manifest.applications?.gecko ? "firefox" : "chrome";
-  public management = new Management();
-  public seshat = new SeshatPort();
+  public port = new NativePort();
 
   private uuid!: string;
   private initialized = false;
@@ -59,14 +57,6 @@ export class Background {
           await this.initializedPromise;
         }
 
-        if (
-          this.browserType === "firefox" &&
-          details.url.includes("/config.json?cachebuster=")
-        ) {
-          debug("incoming config request", details);
-          return this.riotConfigListener(details);
-        }
-
         if (details.url.endsWith("/bundle.js")) {
           debug("incoming bundle request", details);
           return this.riotBundleListener(details);
@@ -79,10 +69,6 @@ export class Background {
         types: ["script", "xmlhttprequest"],
       },
       ["blocking"]
-    );
-
-    browser.runtime.onMessageExternal.addListener(
-      this.handleExternalMessage.bind(this)
     );
 
     browser.runtime.onInstalled.addListener(
@@ -116,55 +102,10 @@ export class Background {
               `${url.origin}${url.pathname}`
             )}-${cookieStore}`;
 
-            return this.seshat.handleRuntimeMessage(message.content);
+            return this.port.handleRuntimeMessage(message.content);
         }
       }
     );
-  }
-
-  private async riotConfigListener(details: {
-    requestId: string;
-  }): Promise<browser.webRequest.BlockingResponse> {
-    const filter = browser.webRequest.filterResponseData(
-      details.requestId
-    ) as any;
-    const decoder = new TextDecoder("utf-8");
-    const encoder = new TextEncoder();
-
-    const data: any[] = [];
-    filter.ondata = (event: any): void => {
-      data.push(event.data);
-    };
-
-    filter.onstop = (): void => {
-      let configStr = "";
-      if (data.length == 1) {
-        configStr = decoder.decode(data[0]);
-      } else {
-        for (let i = 0; i < data.length; i++) {
-          const stream = i == data.length - 1 ? false : true;
-          configStr += decoder.decode(data[i], { stream });
-        }
-      }
-
-      try {
-        const config = JSON.parse(configStr);
-        if (!config.features) {
-          config.features = {};
-        }
-        // eslint-disable-next-line @typescript-eslint/camelcase
-        config.features.feature_event_indexing = "enable";
-        configStr = JSON.stringify(config, null, 2);
-        debug("added indexing feature to config.json");
-      } catch (error) {
-        // no-op
-      }
-
-      filter.write(encoder.encode(configStr));
-      filter.close();
-    };
-
-    return {};
   }
 
   private async riotBundleListener(details: {
@@ -201,26 +142,6 @@ export class Background {
     return {
       redirectUrl: this.bundleResourceURL,
     };
-  }
-
-  private async handleExternalMessage(
-    message: any,
-    sender: browser.runtime.MessageSender
-  ): Promise<any> {
-    debug("external message received", message, sender);
-    if (sender.id !== "@riot-webext") {
-      throw new Error("Access denied");
-    }
-
-    if (!this.initialized) {
-      debug("waiting for initialization", message, sender);
-      await this.initializedPromise;
-    }
-
-    switch (message.type) {
-      case "seshat":
-        return this.seshat.handleRuntimeMessage(message);
-    }
   }
 
   private async onBrowserActionClick(tab: browser.tabs.Tab): Promise<void> {

@@ -1,6 +1,6 @@
-import { debug } from "~/background/debug";
+import { debug } from "./debug";
 
-export class SeshatPort {
+export class NativePort {
   private port?: browser.runtime.Port;
   private rpcId = 0;
   private rpcPromises: Map<number, any> = new Map();

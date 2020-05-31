@@ -2,7 +2,10 @@
   "description": "Extending Riot Web with native messaging capabilities",
   "manifest_version": 2,
   "name": "Radical Native",
-  "version": "0.1",
+  "version": "0.1beta11",
+  "icons": {
+    "32": "icons/32.png"
+  },
   "browser_action": {
     "default_title": "Radical Native",
     "default_icon": {
@@ -10,20 +13,23 @@
     }
   },
   "background": {
-    "scripts": ["browser-polyfill.min.js", "background.js"]
+    "scripts": ["background.js"]
   },
   "permissions": [
     "activeTab",
-    "management",
+    "contextualIdentities",
+    "cookies",
     "nativeMessaging",
     "storage",
     "webRequest",
     "webRequestBlocking"
   ],
-  "optional_permissions": [
-    "<all_urls>"
-  ],
-  "web_accessible_resources": [
-    "resources/*"
-  ]
+  "optional_permissions": ["<all_urls>"],
+  "web_accessible_resources": ["resources/*"],
+  "applications": {
+    "gecko": {
+      "id": "@radical-native",
+      "strict_min_version": "68.0"
+    }
+  }
 }

@@ -2,80 +2,80 @@
 /* eslint-disable @typescript-eslint/camelcase */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
-class SeshatIndexManager {
-  private rpcId = 0;
-  private rpcPromises: Map<number, any> = new Map();
+let rpcId = 0;
+const rpcPromises: Map<number, any> = new Map();
 
-  handleMessage(message: any) {
-    switch (message.method) {
-      case "rpc":
-        const rpcPromise = this.rpcPromises.get(message.rpcId);
-        if (!rpcPromise) {
-          console.log(
-            "[RadicalNative::page] message received without matching rpcPromise",
-            message
-          );
-          return;
-        }
-        rpcPromise.resolve(message.reply);
-        this.rpcPromises.delete(message.rpcId);
-        break;
-    }
+function handleMessage(message: any) {
+  switch (message.method) {
+    case "rpc":
+      const rpcPromise = rpcPromises.get(message.rpcId);
+      if (!rpcPromise) {
+        console.log(
+          "[RadicalNative::page] message received without matching rpcPromise",
+          message
+        );
+        return;
+      }
+      rpcPromise.resolve(message.reply);
+      rpcPromises.delete(message.rpcId);
+      break;
   }
+}
 
-  postMessage(message: any) {
-    return new Promise((resolve, reject) => {
-      this.rpcId++;
-      const rpcMessage = {
-        type: "seshat",
-        target: "contentscript",
-        rpcId: this.rpcId,
-        content: message,
-      };
-      this.rpcPromises.set(this.rpcId, {
-        message: rpcMessage,
-        resolve,
-        reject,
-      });
-      window.postMessage(rpcMessage, "*");
+function postMessage(type: string, message: any): Promise<any> {
+  return new Promise((resolve, reject) => {
+    rpcId++;
+    const rpcMessage = {
+      type,
+      target: "contentscript",
+      rpcId,
+      content: message,
+    };
+    rpcPromises.set(rpcId, {
+      message: rpcMessage,
+      resolve,
+      reject,
     });
-  }
+    window.postMessage(rpcMessage, "*");
+  });
+}
 
+class SeshatIndexManager {
   async supportsEventIndexing() {
-    return this.postMessage({ method: "supportsEventIndexing" });
+    return postMessage("seshat", { method: "supportsEventIndexing" });
   }
 
   async initEventIndex() {
-    return this.postMessage({ method: "initEventIndex" });
+    return postMessage("seshat", { method: "initEventIndex" });
   }
 
   async addEventToIndex(ev: any, profile: any) {
-    return this.postMessage({
+    return postMessage("seshat", {
       method: "addEventToIndex",
       content: { ev, profile },
     });
   }
 
   async isEventIndexEmpty() {
-    return this.postMessage({ method: "isEventIndexEmpty" });
+    return postMessage("seshat", { method: "isEventIndexEmpty" });
   }
 
   async commitLiveEvents() {
-    return this.postMessage({ method: "commitLiveEvents" });
+    return postMessage("seshat", { method: "commitLiveEvents" });
   }
 
   async searchEventIndex(config: any) {
     const term = config.search_term;
     delete config.search_term;
 
-    return this.postMessage({
+    return postMessage("seshat", {
       method: "searchEventIndex",
       content: { term, config },
     });
   }
 
   async addHistoricEvents(events: any, checkpoint: any, oldCheckpoint: any) {
-    return this.postMessage({
+    return postMessage("seshat", {
       method: "addHistoricEvents",
       content: {
         events,
@@ -86,41 +86,47 @@ class SeshatIndexManager {
   }
 
   async addCrawlerCheckpoint(checkpoint: any) {
-    return this.postMessage({
+    return postMessage("seshat", {
       method: "addCrawlerCheckpoint",
       content: { checkpoint },
     });
   }
 
   async removeCrawlerCheckpoint(oldCheckpoint: any) {
-    return this.postMessage({
+    return postMessage("seshat", {
       method: "removeCrawlerCheckpoint",
       content: { oldCheckpoint },
     });
   }
 
   async loadFileEvents(args: any) {
-    return this.postMessage({ method: "loadFileEvents", content: { ...args } });
+    return postMessage("seshat", {
+      method: "loadFileEvents",
+      content: { ...args },
+    });
   }
 
   async loadCheckpoints() {
-    return this.postMessage({ method: "loadCheckpoints" });
+    return postMessage("seshat", { method: "loadCheckpoints" });
   }
 
   async closeEventIndex() {
-    return this.postMessage({ method: "closeEventIndex" });
+    return postMessage("seshat", { method: "closeEventIndex" });
   }
 
   async getStats() {
-    return this.postMessage({ method: "getStats" });
+    return postMessage("seshat", { method: "getStats" });
   }
 
   async deleteEventIndex() {
-    return this.postMessage({ method: "deleteEventIndex" });
+    return postMessage("seshat", { method: "deleteEventIndex" });
   }
 
   async deleteEvent(eventId: any) {
-    return this.postMessage({ method: "deleteEvent", content: { eventId } });
+    return postMessage("seshat", {
+      method: "deleteEvent",
+      content: { eventId },
+    });
   }
 }
 
@@ -166,8 +172,8 @@ window.addEventListener("message", function (event) {
       handleToBundleMessage(event.data);
       break;
 
-    case "seshat":
-      indexManager.handleMessage(event.data);
+    default:
+      handleMessage(event.data);
       break;
   }
 });
