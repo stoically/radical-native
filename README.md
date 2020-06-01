@@ -7,8 +7,8 @@ Extending [Riot Web](https://github.com/vector-im/riot-web) with native capabili
 #### Features
 
 - [x] Search functionality in encrypted rooms using [seshat](https://github.com/matrix-org/seshat)
+- [x] Secure OS key storage for pickle keys using [keytar](https://github.com/atom/node-keytar)
 - [ ] OS global keyboard shortcuts (e.g. push to talk)
-- [ ] Secure OS key storage (similar to e.g. [keytar](https://www.npmjs.com/package/keytar))
 - [ ] Tray icon
 
 #### Supported Browsers
