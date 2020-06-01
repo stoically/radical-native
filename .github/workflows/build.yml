@@ -23,12 +23,17 @@ jobs:
       - name: ubuntu
         if: matrix.config.os == 'ubuntu-latest'
         run: |
-          sudo apt-get install libsqlcipher0 libsqlcipher-dev
+          sudo apt-get install libsqlcipher0 libsqlcipher-dev libsecret-1-dev
           cargo install cargo-deb
 
       - name: build
         shell: bash
         run: |
+          # enable symlinking for windows
+          # (workaround for patched cxx crate)
+          export MSYS=winsymlinks:nativestrict
+          git config --global core.symlinks true
+
           npm install
           npm run lint
           npm run build:native
