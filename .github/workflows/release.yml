@@ -33,9 +33,26 @@ jobs:
     strategy:
       matrix:
         config:
-          - { os: ubuntu-latest, suffix: "x86-amd64.deb", asset_path: "./target/release/radical-native.deb" }
-          - { os: macos-latest, suffix: "darwin.pkg", asset_path: "./target/release/radical-native.pkg" }
-          - { os: windows-latest, suffix: "win64.exe", asset_path: "./target/release/radical-native-installer.exe" }
+          - {
+              os: ubuntu-latest,
+              suffix: "x86-amd64.deb",
+              asset_path: "./target/release/radical-native.deb",
+            }
+          - {
+              os: ubuntu-latest,
+              suffix: "x86-amd64",
+              asset_path: "./target/release/radical-native",
+            }
+          - {
+              os: macos-latest,
+              suffix: "darwin.pkg",
+              asset_path: "./target/release/radical-native.pkg",
+            }
+          - {
+              os: windows-latest,
+              suffix: "win64.exe",
+              asset_path: "./target/release/radical-native-installer.exe",
+            }
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v1
@@ -47,7 +64,7 @@ jobs:
         run: |
           sudo apt-get install libsqlcipher0 libsqlcipher-dev
           cargo install cargo-deb
-          
+
       - name: build
         id: build
         shell: bash
