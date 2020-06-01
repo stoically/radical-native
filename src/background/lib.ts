@@ -6,9 +6,9 @@ export class Background {
   public manifest = browser.runtime.getManifest();
   public version = this.manifest.version;
   public browserType = this.manifest.applications?.gecko ? "firefox" : "chrome";
-  public port = new NativePort();
+  public native = new NativePort(this);
+  public uuid!: string;
 
-  private uuid!: string;
   private initialized = false;
   private initializedPromise: Promise<void>;
   private bundleResourceURL = browser.runtime.getURL("resources/bundle.js");
@@ -71,14 +71,6 @@ export class Background {
       ["blocking"]
     );
 
-    browser.runtime.onInstalled.addListener(
-      ({ temporary }: { temporary: boolean }) => {
-        if (temporary) {
-          window.DEBUG = true;
-        }
-      }
-    );
-
     browser.browserAction.onClicked.addListener(
       this.onBrowserActionClick.bind(this)
     );
@@ -90,20 +82,7 @@ export class Background {
     browser.runtime.onMessage.addListener(
       (message: any, sender: browser.runtime.MessageSender) => {
         debug("internal message received", message, sender);
-        switch (message.type) {
-          case "seshat":
-            const url = new URL(sender.url!);
-            const cookieStore =
-              this.browserType === "firefox"
-                ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                  sender.tab!.cookieStoreId!
-                : "default";
-            message.content.eventStore = `web-${this.uuid}-${encodeURIComponent(
-              `${url.origin}${url.pathname}`
-            )}-${cookieStore}`;
-
-            return this.port.handleRuntimeMessage(message.content);
-        }
+        return this.native.handleRuntimeMessage(message, sender);
       }
     );
   }

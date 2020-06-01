@@ -12,9 +12,9 @@ pub fn stdin() -> Result<(i64, Value)> {
     let mut data_buffer = vec![0u8; size as usize];
     io::stdin().read_exact(&mut data_buffer)?;
     let message: Value = serde_json::from_slice(&data_buffer)?;
-    let rpc_id = match message.get("rpc_id") {
-        Some(res) => res.as_i64().context("invalid rpc_id")?,
-        None => bail!("no rpc_id given"),
+    let rpc_id = match message.get("rpcId") {
+        Some(res) => res.as_i64().context("invalid rpcId")?,
+        None => bail!("no rpcId given"),
     };
 
     Ok((rpc_id, message))

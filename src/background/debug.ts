@@ -4,7 +4,7 @@ declare global {
   }
 }
 
-window.DEBUG = false;
+window.DEBUG = process.env.NODE_ENV === "development" ? true : false;
 
 export const debug = (...args: any[]): void => {
   if (!window.DEBUG) {

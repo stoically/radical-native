@@ -18,14 +18,14 @@ esac
 
 HOST_BIN_HOME="$DATA_HOME/radical-native"
 mkdir -p "$HOST_BIN_HOME"
-NATIVE_MANIFEST_NAME="radical.native"
+NATIVE_MANIFEST_NAME="radical.native.dev"
 NATIVE_MANIFEST_FILENAME="$NATIVE_MANIFEST_NAME.json"
 NATIVE_HOST_APP_BIN="$PWD/target/debug/radical-native"
 
 
 install() {
   if [ "$1" = "firefox" ]; then
-    ALLOWED='"allowed_extensions": [ "@radical-native" ]'
+    ALLOWED='"allowed_extensions": [ "@radical-native", "@riot-webext" ]'
     case "$OSTYPE" in
       linux*)   NATIVE_HOSTS_PATH="$HOME/.mozilla/native-messaging-hosts" ;;
       darwin*)  NATIVE_HOSTS_PATH="$HOME/Library/Application Support/Mozilla/NativeMessagingHosts" ;; 

@@ -34,7 +34,7 @@ native_manifest() {
     "description": "Radical Native",
     "path": "$1",
     "type": "stdio",
-    "allowed_extensions": [ "@radical-native" ]
+    "allowed_extensions": [ "@radical-native", "@riot-webext" ]
 }
 END
 }

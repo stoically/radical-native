@@ -1,28 +1,65 @@
 import { debug } from "./debug";
+import { Background } from "./lib";
 
 export class NativePort {
+  private name =
+    process.env.NODE_ENV === "development"
+      ? "radical.native.dev"
+      : "radical.native";
   private port?: browser.runtime.Port;
-  private rpcId = 0;
   private rpcPromises: Map<number, any> = new Map();
   private ready = false;
+  private bg: Background;
 
-  constructor() {
+  constructor(bg: Background) {
+    this.bg = bg;
     this.init();
   }
 
-  async handleRuntimeMessage(message: any): Promise<any> {
-    debug("message for seshat received", message);
-    switch (message.method) {
-      case "supportsEventIndexing":
-        return this.ready;
+  async handleRuntimeMessage(
+    runtimeMessage: any,
+    sender: browser.runtime.MessageSender
+  ): Promise<any> {
+    debug("runtime message received", runtimeMessage);
+    if (!this.ready) {
+      debug("port not ready, waiting 5s");
+      // port not ready yet, give it 5s to change its mind
+      await new Promise((resolve) => setTimeout(resolve, 5 * 1000));
 
-      default:
-        return this.postMessage(message);
+      if (!this.ready) {
+        debug("port not reachable, probably not installed");
+        return null;
+      }
     }
+
+    // construct native message from runtime message
+    const message = runtimeMessage.content;
+    message.type = runtimeMessage.type;
+    message.rpcId = runtimeMessage.rpcId;
+
+    switch (message.type) {
+      case "seshat":
+        if (message.method === "supportsEventIndexing") {
+          return true;
+        }
+
+        const url = new URL(sender.url!);
+        message.eventStore = `web-${this.bg.uuid}-${encodeURIComponent(
+          `${url.origin}${url.pathname}`
+        )}-${
+          this.bg.browserType === "firefox"
+            ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              sender.tab!.cookieStoreId!
+            : "default"
+        }`;
+        break;
+    }
+
+    return this.postMessage(message);
   }
 
   private init(): void {
-    this.port = browser.runtime.connectNative("radical.native");
+    this.port = browser.runtime.connectNative(this.name);
     this.port.onDisconnect.addListener(this.handleDisconnect.bind(this));
     this.port.onMessage.addListener(this.handleMessage.bind(this));
   }
@@ -36,15 +73,13 @@ export class NativePort {
 
   private postMessage(message: any): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.rpcId++;
       // eslint-disable-next-line @typescript-eslint/camelcase
-      message.rpc_id = this.rpcId;
-      this.rpcPromises.set(this.rpcId, {
+      this.rpcPromises.set(message.rpcId, {
         message,
         resolve,
         reject,
       });
-      debug("posting to radical.native", message);
+      debug(`posting to ${this.name}`, message);
       this.port?.postMessage(message);
     });
   }
@@ -94,7 +129,9 @@ export class NativePort {
 
     debug("retrying port connection in 60s");
     setTimeout(() => {
-      this.init();
+      if (!this.ready) {
+        this.init();
+      }
     }, 60 * 1000);
   }
 }

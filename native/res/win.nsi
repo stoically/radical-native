@@ -20,7 +20,7 @@ FileWrite $0 '{$\r$\n\
     "description": "Radical Native",$\r$\n\
     "path": "$R0\\radical-native.exe",$\r$\n\
     "type": "stdio",$\r$\n\
-    "allowed_extensions": [ "@radical-native" ]$\r$\n\
+    "allowed_extensions": [ "@radical-native", "@riot-webext" ]$\r$\n\
 }'
 FileClose $0
 

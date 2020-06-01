@@ -9,7 +9,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use crate::Radical;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "method")]
 pub enum Message {
     InitEventIndex(InitEventIndex),
@@ -28,19 +28,19 @@ pub enum Message {
     DeleteEventIndex,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct InitEventIndex {
     pub passphrase: Option<String>,
     pub language: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct AddEventToIndex {
     pub ev: Value,
     pub profile: Profile,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AddHistoricEvents {
     pub checkpoint: Option<CrawlerCheckpoint>,
@@ -48,13 +48,13 @@ pub struct AddHistoricEvents {
     pub events: Option<Vec<Events>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct SearchEventIndex {
     pub term: String,
     pub config: SearchConfig,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteEvent {
     pub event_id: String,
@@ -251,21 +251,21 @@ impl Indexer {
 
     fn config(message: InitEventIndex) -> Config {
         let mut config = Config::new();
-    
+
         let passphrase = match message.passphrase {
             Some(passphrase) => passphrase,
             None => "DEFAULT_PASSPHRASE".to_owned(),
         };
         config = config.set_passphrase(passphrase);
-    
+
         if let Some(language) = message.language {
             let language = Language::from(language.as_str());
             config = config.set_language(&language);
         }
-    
+
         config
     }
-    
+
     fn convert_event(event: Value) -> Result<seshat::Event> {
         let source = serde_json::to_string(&event)?;
         let event: Event = serde_json::from_value(event)?;
@@ -301,7 +301,7 @@ impl Indexer {
                 source,
             },
         };
-    
+
         Ok(res)
     }
 
@@ -336,7 +336,8 @@ impl Indexer {
             }
         }
 
-        let res = self.database
+        let res = self
+            .database
             .add_historic_events(events, message.checkpoint, message.old_checkpoint)
             .recv()??;
 

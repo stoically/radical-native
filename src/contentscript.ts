@@ -18,10 +18,10 @@ const handleFromBundleMessage = (message: any): void => {
   }
 };
 
-const handleSeshatMessage = async (message: any): Promise<void> => {
+const handleMessage = async (message: any): Promise<void> => {
   const reply = await browser.runtime.sendMessage(message);
   const rpcReply = {
-    type: "seshat",
+    type: message.type,
     target: "page",
     method: "rpc",
     rpcId: message.rpcId,
@@ -40,8 +40,8 @@ window.addEventListener("message", function (event) {
       handleFromBundleMessage(event.data);
       break;
 
-    case "seshat":
-      handleSeshatMessage(event.data);
+    default:
+      handleMessage(event.data);
       break;
   }
 });
