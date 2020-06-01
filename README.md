@@ -20,16 +20,16 @@ Extending [Riot Web](https://github.com/vector-im/riot-web) with native capabili
 
 ### 1. Radical Native
 
-- Ubuntu/Debian: [`radical-native.deb`](https://github.com/stoically/radical-native/releases)
-- MacOS: [`radical-native.pkg`](https://github.com/stoically/radical-native/releases)
+- Ubuntu/Debian: [`.deb`](https://github.com/stoically/radical-native/releases)
+- MacOS: [`.pkg`](https://github.com/stoically/radical-native/releases)
   - Note: Requires Ctrl+Click on the `.pkg` since the installer isn't signed yet
-- Windows: [`radical-native.exe`](https://github.com/stoically/radical-native/releases)
+- Windows: [`.exe`](https://github.com/stoically/radical-native/releases)
 
 Hint: The event store is saved into the `radical-native` directory inside your [local user data directory](https://github.com/soc/dirs-rs#features).
 
 ### 2. Radical Native Add-on
 
-- Firefox: [`radical-native.xpi`](https://github.com/stoically/radical-native/releases)
+- Firefox: [`.xpi`](https://github.com/stoically/radical-native/releases)
 
 The Radical Native Firefox Add-on facilitates the communication between Riot Web and the Radical Native Binary.
 
