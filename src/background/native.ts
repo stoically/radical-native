@@ -73,7 +73,6 @@ export class NativePort {
 
   private postMessage(message: any): Promise<void> {
     return new Promise((resolve, reject) => {
-      // eslint-disable-next-line @typescript-eslint/camelcase
       this.rpcPromises.set(message.rpcId, {
         message,
         resolve,
@@ -94,7 +93,7 @@ export class NativePort {
       return;
     }
 
-    const rpcPromise = this.rpcPromises.get(message.rpc_id);
+    const rpcPromise = this.rpcPromises.get(message.rpcId);
     if (!rpcPromise) {
       debug("port message received without matching rpcPromise", message);
       return;
@@ -113,7 +112,7 @@ export class NativePort {
       });
       rpcPromise.reject(new Error(message.error));
     }
-    this.rpcPromises.delete(message.rpc_id);
+    this.rpcPromises.delete(message.rpcId);
   }
 
   private handleDisconnect(port: browser.runtime.Port): void {

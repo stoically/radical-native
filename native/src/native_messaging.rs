@@ -29,7 +29,7 @@ pub fn stdout_ready() {
 
 pub fn stdout_reply(rpc_id: i64, reply: Value) {
     stdout(json!({
-        "rpc_id": rpc_id,
+        "rpcId": rpc_id,
         "reply": reply,
     }))
     .unwrap_or_else(|error| eprintln!("{:?}", error));
@@ -37,7 +37,7 @@ pub fn stdout_reply(rpc_id: i64, reply: Value) {
 
 pub fn stdout_error(rpc_id: i64, error: Error) {
     stdout(json!({
-        "rpc_id": rpc_id,
+        "rpcId": rpc_id,
         "error": format!("{:?}", error),
     }))
     .unwrap_or_else(|error| eprintln!("{:?}", error));
