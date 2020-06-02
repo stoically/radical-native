@@ -22,7 +22,8 @@ pub fn stdin() -> Result<(i64, Value)> {
 
 pub fn stdout_ready() {
     stdout(json!({
-        "ready": true
+        "ready": true,
+        "version": env!("CARGO_PKG_VERSION").to_owned(),
     }))
     .unwrap_or_else(|error| eprintln!("{:?}", error));
 }
