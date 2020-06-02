@@ -15,7 +15,7 @@ keytar = { git = "https://github.com/stoically/keytar-rs", rev = "0589957f" }
 rand = "0.7.3"
 serde = "1.0.106"
 serde_json = "1.0.51"
-seshat = { git = "https://github.com/stoically/seshat", rev = "92133d7" }
+seshat = { git = "https://github.com/matrix-org/seshat", rev = "92133d7" }
 
 [dev-dependencies]
 tempfile = "3.1.0"
