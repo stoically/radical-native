@@ -16,7 +16,12 @@ function rpcHandleMessage(message: any) {
         );
         return;
       }
-      rpcPromise.resolve(message.reply);
+
+      if (!message.error) {
+        rpcPromise.resolve(message.reply);
+      } else {
+        rpcPromise.reject(message.error);
+      }
       rpcPromises.delete(message.rpcId);
       break;
   }
@@ -147,33 +152,40 @@ class PlatformPeg {
       userId: string,
       deviceId: string
     ): Promise<string | null> => {
-      console.log("getPickleKey", userId, deviceId);
-      return rpcPostMessage("keytar", {
-        method: "getPickleKey",
-        content: { userId, deviceId },
-      });
+      try {
+        return await rpcPostMessage("keytar", {
+          method: "getPickleKey",
+          content: { userId, deviceId },
+        });
+      } catch (e) {
+        return null;
+      }
     };
 
     this.platform.createPickleKey = async (
       userId: string,
       deviceId: string
     ): Promise<string | null> => {
-      console.log("createPickleKey", userId, deviceId);
-      return rpcPostMessage("keytar", {
-        method: "createPickleKey",
-        content: { userId, deviceId },
-      });
+      try {
+        return await rpcPostMessage("keytar", {
+          method: "createPickleKey",
+          content: { userId, deviceId },
+        });
+      } catch (e) {
+        return null;
+      }
     };
 
     this.platform.destroyPickleKey = async (
       userId: string,
       deviceId: string
-    ): Promise<string | null> => {
-      console.log("destroyPickleKey", userId, deviceId);
-      return rpcPostMessage("keytar", {
-        method: "destroyPickleKey",
-        content: { userId, deviceId },
-      });
+    ): Promise<void> => {
+      try {
+        await rpcPostMessage("keytar", {
+          method: "destroyPickleKey",
+          content: { userId, deviceId },
+        });
+      } catch (e) {}
     };
   }
 }

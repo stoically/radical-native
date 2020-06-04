@@ -19,14 +19,20 @@ const handleFromBundleMessage = (message: any): void => {
 };
 
 const handleMessage = async (message: any): Promise<void> => {
-  const reply = await browser.runtime.sendMessage(message);
-  const rpcReply = {
+  const rpcReply: { [key: string]: any } = {
     type: message.type,
     target: "page",
     method: "rpc",
     rpcId: message.rpcId,
-    reply,
   };
+
+  try {
+    rpcReply.reply = await browser.runtime.sendMessage(message);
+  } catch (error) {
+    console.error(error.toString(), message);
+    rpcReply.error = error.toString();
+  }
+
   window.postMessage(rpcReply, "*");
 };
 
