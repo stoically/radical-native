@@ -21,6 +21,7 @@ Extending [Riot Web](https://github.com/vector-im/riot-web) with native capabili
 ### 1. Radical Native
 
 - Ubuntu/Debian: [`.deb`](https://github.com/stoically/radical-native/releases)
+- Arch: [`AUR`](https://aur.archlinux.org/packages/radical-native-bin/)
 - MacOS: [`.pkg`](https://github.com/stoically/radical-native/releases)
   - Note: Requires Ctrl+Click on the `.pkg` since the installer isn't signed yet
 - Windows: [`.exe`](https://github.com/stoically/radical-native/releases)
