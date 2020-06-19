@@ -22,6 +22,8 @@ pub enum Message {
     RemoveCrawlerCheckpoint { content: AddHistoricEvents },
     SearchEventIndex { content: SearchEventIndex },
     LoadFileEvents { content: LoadConfig },
+    GetUserVersion,
+    SetUserVersion { content: SetUserVersion },
     DeleteEvent { content: DeleteEvent },
     GetStats,
     CloseEventIndex,
@@ -58,6 +60,12 @@ pub struct SearchEventIndex {
 #[serde(rename_all = "camelCase")]
 pub struct DeleteEvent {
     pub event_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetUserVersion {
+    pub version: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -186,6 +194,8 @@ pub fn handle_message(radical: &mut Radical, message_in: Value) -> Result<Value>
             Message::RemoveCrawlerCheckpoint { content } => indexer.add_history_events(content)?,
             Message::SearchEventIndex { content } => indexer.search_event_index(content)?,
             Message::LoadFileEvents { content } => indexer.load_file_events(content)?,
+            Message::GetUserVersion => indexer.get_user_version()?,
+            Message::SetUserVersion { content } => indexer.set_user_version(content)?,
             Message::DeleteEvent { content } => indexer.delete_event(content)?,
             Message::GetStats => indexer.get_stats()?,
             Message::CloseEventIndex => Indexer::shutdown(&event_store, &mut radical.indexer)?,
@@ -402,6 +412,16 @@ impl Indexer {
     fn get_stats(&self) -> Result<Value> {
         let res = self.connection.get_stats()?;
         Ok(json!(res))
+    }
+
+    fn get_user_version(&self) -> Result<Value> {
+        let res = self.connection.get_user_version()?;
+        Ok(json!(res))
+    }
+
+    fn set_user_version(&self, content: SetUserVersion) -> Result<Value> {
+        self.connection.set_user_version(content.version)?;
+        Ok(json!(null))
     }
 
     fn delete_event(&self, message: DeleteEvent) -> Result<Value> {

@@ -121,6 +121,17 @@ class SeshatIndexManager {
     return rpcPostMessage("seshat", { method: "getStats" });
   }
 
+  async getUserVersion() {
+    return rpcPostMessage("seshat", { method: "getUserVersion" });
+  }
+
+  async setUserVersion(version: number): Promise<void> {
+    return rpcPostMessage("seshat", {
+      method: "setUserVersion",
+      content: { version },
+    });
+  }
+
   async deleteEventIndex() {
     return rpcPostMessage("seshat", { method: "deleteEventIndex" });
   }
