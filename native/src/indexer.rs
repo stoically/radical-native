@@ -2,8 +2,8 @@ use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use seshat::{
-    Config, Connection, CrawlerCheckpoint, Database, EventType, Language, LoadConfig, Profile,
-    SearchConfig,
+    Config, Connection, CrawlerCheckpoint, Database, Error as SeshatError, EventType, Language,
+    LoadConfig, Profile, RecoveryDatabase, SearchConfig,
 };
 use std::{collections::HashMap, path::PathBuf};
 
@@ -223,12 +223,49 @@ impl Indexer {
     }
 
     pub fn new_in_path(path: PathBuf, config: Config) -> Result<Indexer> {
-        let database = Database::new_with_config(path, &config)?;
+        let database = match Database::new_with_config(path.clone(), &config) {
+            Ok(database) => database,
+            Err(error) => match error {
+                SeshatError::ReindexError => {
+                    Indexer::reindex(path.clone(), &config)?;
+                    Database::new_with_config(path, &config)?
+                }
+                _ => bail!("Error opening the database: {:?}", error),
+            },
+        };
+
         let connection = database.get_connection()?;
         Ok(Indexer {
             database,
             connection,
         })
+    }
+
+    // copy&paste'd from https://github.com/matrix-org/seshat/blob/96d02b6e5d3a53db0174361aee36a02936c40bfa/seshat-node/native/src/tasks.rs#L387
+    // this will probably move upstream into dedicated methods at some point,
+    // when design decisions about reindex progress in the riot UI are made
+    pub fn reindex(path: PathBuf, config: &Config) -> Result<()> {
+        let mut db = RecoveryDatabase::new_with_config(path, config)?;
+        db.delete_the_index()?;
+        db.open_index()?;
+
+        let mut events = db.load_events_deserialized(500, None)?;
+        db.index_events(&events)?;
+
+        loop {
+            events = db.load_events_deserialized(500, events.last())?;
+
+            if events.is_empty() {
+                break;
+            }
+
+            db.index_events(&events)?;
+            db.commit()?;
+        }
+
+        db.commit_and_close()?;
+
+        Ok(())
     }
 
     fn event_store_path(event_store: &str) -> Result<PathBuf> {
