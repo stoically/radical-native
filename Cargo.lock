@@ -811,7 +811,7 @@ dependencies = [
 [[package]]
 name = "keytar"
 version = "0.1.1"
-source = "git+https://github.com/stoically/keytar-rs?rev=0589957f#0589957f26808037f5a9865df7bf4c2414505f4e"
+source = "git+https://github.com/stoically/keytar-rs?rev=b1203bf#b1203bf932e043c89ac1603e7b41c24d513d1d36"
 dependencies = [
  "keytar-sys",
 ]
@@ -819,7 +819,7 @@ dependencies = [
 [[package]]
 name = "keytar-sys"
 version = "0.1.1"
-source = "git+https://github.com/stoically/keytar-rs?rev=0589957f#0589957f26808037f5a9865df7bf4c2414505f4e"
+source = "git+https://github.com/stoically/keytar-rs?rev=b1203bf#b1203bf932e043c89ac1603e7b41c24d513d1d36"
 dependencies = [
  "cc",
  "cxx",
