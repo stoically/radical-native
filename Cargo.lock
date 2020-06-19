@@ -377,7 +377,7 @@ dependencies = [
 [[package]]
 name = "cxx"
 version = "0.3.4"
-source = "git+https://github.com/stoically/cxx#a5a788f6d5040ec5e3a3e4aca90653d8fdaea8ee"
+source = "git+https://github.com/stoically/cxx#e068a90fd6d2f156429c563a6be0c3b61beaa308"
 dependencies = [
  "cc",
  "cxxbridge-macro",
@@ -387,7 +387,7 @@ dependencies = [
 [[package]]
 name = "cxx-build"
 version = "0.3.4"
-source = "git+https://github.com/stoically/cxx#a5a788f6d5040ec5e3a3e4aca90653d8fdaea8ee"
+source = "git+https://github.com/stoically/cxx#e068a90fd6d2f156429c563a6be0c3b61beaa308"
 dependencies = [
  "anyhow",
  "cc",
@@ -400,7 +400,7 @@ dependencies = [
 [[package]]
 name = "cxxbridge-macro"
 version = "0.3.4"
-source = "git+https://github.com/stoically/cxx#a5a788f6d5040ec5e3a3e4aca90653d8fdaea8ee"
+source = "git+https://github.com/stoically/cxx#e068a90fd6d2f156429c563a6be0c3b61beaa308"
 dependencies = [
  "proc-macro2",
  "quote",
