@@ -65,6 +65,7 @@ pub struct SearchResults {
     pub count: usize,
     pub results: Vec<SearchResult>,
     pub highlights: Vec<SearchHighlight>,
+    pub next_batch: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -346,10 +347,10 @@ impl Indexer {
 
     fn search_event_index(&self, message: SearchEventIndex) -> Result<Value> {
         let searcher = self.database.get_searcher();
-        let (count, search_results) = searcher.search(&message.term, &message.config)?;
+        let search_batch = searcher.search(&message.term, &message.config)?;
 
         let mut results = Vec::new();
-        for result in search_results {
+        for result in search_batch.results {
             let event: Value = serde_json::from_str(&result.event_source)?;
             let mut events_before = Vec::new();
             for event in result.events_before.iter() {
@@ -373,10 +374,16 @@ impl Indexer {
             });
         }
 
+        let next_batch = match search_batch.next_batch {
+            Some(next_batch) => Some(next_batch.to_hyphenated().to_string()),
+            None => None,
+        };
+
         let res = SearchResults {
-            count,
+            count: search_batch.count,
             results,
             highlights: vec![],
+            next_batch,
         };
 
         Ok(json!(res))

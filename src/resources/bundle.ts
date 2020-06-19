@@ -70,7 +70,6 @@ class SeshatIndexManager {
 
   async searchEventIndex(config: any) {
     const term = config.search_term;
-    delete config.search_term;
 
     return rpcPostMessage("seshat", {
       method: "searchEventIndex",
