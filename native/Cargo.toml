@@ -21,7 +21,7 @@ seshat = "2.0.0"
 tempfile = "3.1.0"
 
 [package.metadata.deb]
-depends = "libsqlcipher0"
+depends = "libsecret-1-0, libsqlcipher0"
 assets = [
     ["target/release/radical-native", "/usr/bin/", "755"],
     ["target/release/radical.native.json", "/usr/lib/mozilla/native-messaging-hosts/", "644"]
