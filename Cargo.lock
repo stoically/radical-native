@@ -1635,8 +1635,9 @@ dependencies = [
 
 [[package]]
 name = "seshat"
-version = "2.0.0"
-source = "git+https://github.com/matrix-org/seshat#bb7b7ac7c03409b42ca962052f1a5c96655f1c2b"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7715ea41398a109ab734669abacf4293f308bba7660ce18ba094828e32d10d0a"
 dependencies = [
  "aes-ctr",
  "byteorder",
