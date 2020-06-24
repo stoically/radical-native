@@ -223,11 +223,11 @@ impl Indexer {
     }
 
     pub fn new_in_path(path: PathBuf, config: Config) -> Result<Indexer> {
-        let database = match Database::new_with_config(path.clone(), &config) {
+        let database = match Database::new_with_config(&path, &config) {
             Ok(database) => database,
             Err(error) => match error {
                 SeshatError::ReindexError => {
-                    Indexer::reindex(path.clone(), &config)?;
+                    Indexer::reindex(&path, &config)?;
                     Database::new_with_config(path, &config)?
                 }
                 _ => bail!("Error opening the database: {:?}", error),
@@ -241,29 +241,38 @@ impl Indexer {
         })
     }
 
-    // copy&paste'd from https://github.com/matrix-org/seshat/blob/96d02b6e5d3a53db0174361aee36a02936c40bfa/seshat-node/native/src/tasks.rs#L387
-    // this will probably move upstream into dedicated methods at some point,
-    // when design decisions about reindex progress in the riot UI are made
-    pub fn reindex(path: PathBuf, config: &Config) -> Result<()> {
-        let mut db = RecoveryDatabase::new_with_config(path, config)?;
-        db.delete_the_index()?;
-        db.open_index()?;
+    pub fn reindex(path: &PathBuf, config: &Config) -> Result<()> {
+        let mut db = RecoveryDatabase::new_with_config(&path, config)?;
+        // https://github.com/stoically/radical-native/issues/19#issuecomment-648382654
+        if db.get_connection()?.get_user_version()? == 0 {
+            db.shutdown()?;
+            if path.exists() {
+                std::fs::remove_dir_all(path)?;
+            }
+        } else {
+            // copy&paste'd from
+            // https://github.com/matrix-org/seshat/blob/96d02b6e5d3a53db0174361aee36a02936c40bfa/seshat-node/native/src/tasks.rs#L387
+            // this will probably move upstream into dedicated methods at some point,
+            // when design decisions about reindex progress in the riot UI are made
+            db.delete_the_index()?;
+            db.open_index()?;
 
-        let mut events = db.load_events_deserialized(500, None)?;
-        db.index_events(&events)?;
+            let mut events = db.load_events_deserialized(500, None)?;
+            db.index_events(&events)?;
 
-        loop {
-            events = db.load_events_deserialized(500, events.last())?;
+            loop {
+                events = db.load_events_deserialized(500, events.last())?;
 
-            if events.is_empty() {
-                break;
+                if events.is_empty() {
+                    break;
+                }
+
+                db.index_events(&events)?;
+                db.commit()?;
             }
 
-            db.index_events(&events)?;
-            db.commit()?;
+            db.commit_and_close()?;
         }
-
-        db.commit_and_close()?;
 
         Ok(())
     }
