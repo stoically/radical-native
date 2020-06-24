@@ -45,30 +45,37 @@ function rpcPostMessage(type: string, message: any): Promise<any> {
 }
 
 class SeshatIndexManager {
-  async supportsEventIndexing() {
+  supportsEventIndexing() {
     return rpcPostMessage("seshat", { method: "supportsEventIndexing" });
   }
 
-  async initEventIndex() {
+  initEventIndex() {
     return rpcPostMessage("seshat", { method: "initEventIndex" });
   }
 
-  async addEventToIndex(ev: any, profile: any) {
+  addEventToIndex(ev: any, profile: any) {
     return rpcPostMessage("seshat", {
       method: "addEventToIndex",
       content: { ev, profile },
     });
   }
 
-  async isEventIndexEmpty() {
+  isEventIndexEmpty() {
     return rpcPostMessage("seshat", { method: "isEventIndexEmpty" });
   }
 
-  async commitLiveEvents() {
+  isRoomIndexed(roomId: string): Promise<boolean> {
+    return rpcPostMessage("seshat", {
+      method: "isRoomIndexed",
+      content: { roomId },
+    });
+  }
+
+  commitLiveEvents() {
     return rpcPostMessage("seshat", { method: "commitLiveEvents" });
   }
 
-  async searchEventIndex(config: any) {
+  searchEventIndex(config: any) {
     const term = config.search_term;
 
     return rpcPostMessage("seshat", {
@@ -77,7 +84,7 @@ class SeshatIndexManager {
     });
   }
 
-  async addHistoricEvents(events: any, checkpoint: any, oldCheckpoint: any) {
+  addHistoricEvents(events: any, checkpoint: any, oldCheckpoint: any) {
     return rpcPostMessage("seshat", {
       method: "addHistoricEvents",
       content: {
@@ -88,55 +95,55 @@ class SeshatIndexManager {
     });
   }
 
-  async addCrawlerCheckpoint(checkpoint: any) {
+  addCrawlerCheckpoint(checkpoint: any) {
     return rpcPostMessage("seshat", {
       method: "addCrawlerCheckpoint",
       content: { checkpoint },
     });
   }
 
-  async removeCrawlerCheckpoint(oldCheckpoint: any) {
+  removeCrawlerCheckpoint(oldCheckpoint: any) {
     return rpcPostMessage("seshat", {
       method: "removeCrawlerCheckpoint",
       content: { oldCheckpoint },
     });
   }
 
-  async loadFileEvents(args: any) {
+  loadFileEvents(args: any) {
     return rpcPostMessage("seshat", {
       method: "loadFileEvents",
       content: { ...args },
     });
   }
 
-  async loadCheckpoints() {
+  loadCheckpoints() {
     return rpcPostMessage("seshat", { method: "loadCheckpoints" });
   }
 
-  async closeEventIndex() {
+  closeEventIndex() {
     return rpcPostMessage("seshat", { method: "closeEventIndex" });
   }
 
-  async getStats() {
+  getStats() {
     return rpcPostMessage("seshat", { method: "getStats" });
   }
 
-  async getUserVersion() {
+  getUserVersion() {
     return rpcPostMessage("seshat", { method: "getUserVersion" });
   }
 
-  async setUserVersion(version: number): Promise<void> {
+  setUserVersion(version: number): Promise<void> {
     return rpcPostMessage("seshat", {
       method: "setUserVersion",
       content: { version },
     });
   }
 
-  async deleteEventIndex() {
+  deleteEventIndex() {
     return rpcPostMessage("seshat", { method: "deleteEventIndex" });
   }
 
-  async deleteEvent(eventId: any) {
+  deleteEvent(eventId: any) {
     return rpcPostMessage("seshat", {
       method: "deleteEvent",
       content: { eventId },

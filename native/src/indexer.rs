@@ -15,6 +15,7 @@ pub enum Message {
     InitEventIndex(InitEventIndex),
     LoadCheckpoints,
     IsEventIndexEmpty,
+    IsRoomIndexed { content: IsRoomIndexed },
     CommitLiveEvents,
     AddEventToIndex { content: AddEventToIndex },
     AddCrawlerCheckpoint { content: AddHistoricEvents },
@@ -34,6 +35,12 @@ pub enum Message {
 pub struct InitEventIndex {
     pub passphrase: Option<String>,
     pub language: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IsRoomIndexed {
+    pub room_id: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -187,6 +194,7 @@ pub fn handle_message(radical: &mut Radical, message_in: Value) -> Result<Value>
         Some(indexer) => match message {
             Message::LoadCheckpoints => indexer.load_checkpoints()?,
             Message::IsEventIndexEmpty => indexer.is_event_index_empty()?,
+            Message::IsRoomIndexed { content } => indexer.is_room_indexed(content)?,
             Message::CommitLiveEvents => indexer.commit_live_events()?,
             Message::AddEventToIndex { content } => indexer.add_event_to_index(content)?,
             Message::AddCrawlerCheckpoint { content } => indexer.add_history_events(content)?,
@@ -369,6 +377,11 @@ impl Indexer {
 
     fn is_event_index_empty(&self) -> Result<Value> {
         let res = self.connection.is_empty()?;
+        Ok(json!(res))
+    }
+
+    fn is_room_indexed(&self, message: IsRoomIndexed) -> Result<Value> {
+        let res = self.connection.is_room_indexed(&message.room_id)?;
         Ok(json!(res))
     }
 
