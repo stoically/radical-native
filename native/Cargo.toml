@@ -22,6 +22,16 @@ tempfile = "3.1.0"
 
 [package.metadata.deb]
 depends = "libsecret-1-0, libsqlcipher0"
+section = "utils"
+extended-description = """\
+This is a host application for Radical Native browser extension that enhances Riot Web with native capabilities.
+The communication is handled through Native Messaging API.
+.
+Features
+    Search functionality in encrypted rooms using seshat
+    Secure OS key storage for pickle keys using keytar\
+"""
+
 assets = [
     ["target/release/radical-native", "/usr/bin/", "755"],
     ["target/release/radical.native.json", "/usr/lib/mozilla/native-messaging-hosts/", "644"]
