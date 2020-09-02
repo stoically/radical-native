@@ -26,10 +26,8 @@ pub fn handle_message(message_in: Value) -> Result<Value> {
     let message: Message = serde_json::from_value(message_in)?;
     let res = match message {
         Message::GetPickleKey { content } => {
-            let Password { success, password } = get_password(
-                SERVICE.to_owned(),
-                account_string(content.user_id, content.device_id),
-            )?;
+            let Password { success, password } =
+                get_password(SERVICE, &account_string(content.user_id, content.device_id))?;
 
             if success {
                 json!(password)
@@ -43,18 +41,16 @@ pub fn handle_message(message_in: Value) -> Result<Value> {
             let res = json!(pickle_key);
 
             set_password(
-                SERVICE.to_owned(),
-                account_string(content.user_id, content.device_id),
-                pickle_key,
+                SERVICE,
+                &account_string(content.user_id, content.device_id),
+                &pickle_key,
             )?;
 
             res
         }
         Message::DestroyPickleKey { content } => {
-            let success = delete_password(
-                SERVICE.to_owned(),
-                account_string(content.user_id, content.device_id),
-            )?;
+            let success =
+                delete_password(SERVICE, &account_string(content.user_id, content.device_id))?;
 
             json!(success)
         }
