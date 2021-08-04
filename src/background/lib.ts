@@ -173,6 +173,6 @@ export class Background {
     }
 
     await browser.storage.local.set({ riots: this.riots });
-    browser.tabs.reload(tab.id);
+    browser.tabs.reload(tab.id!);
   }
 }
